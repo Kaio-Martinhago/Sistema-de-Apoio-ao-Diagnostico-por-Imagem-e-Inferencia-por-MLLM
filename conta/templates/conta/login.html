@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Sistema de Diagnóstico</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f9; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        .login-card { width: 100%; max-width: 400px; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: white; }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <div class="text-center mb-4">
+        <h4 class="fw-bold text-primary">SADI-IA</h4>
+        <p class="text-muted">Acesso ao Sistema de Imagens</p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label class="form-label">Usuário</label>
+            <input type="text" name="username" class="form-control" required autofocus>
+        </div>
+        <div class="mb-4">
+            <label class="form-label">Senha</label>
+            <input type="password" name="password" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 mb-3">Entrar</button>
+
+        <button type="button" class="btn btn-link d-block text-center mt-2" data-bs-toggle="modal" data-bs-target="#criarContaModal">
+            <a href="{% url 'criar_conta' %}" class="d-block text-center mt-2">Criar nova conta de Médico</a>
+        </button>
+
+        {% if form.errors %}
+            <div class="alert alert-danger py-2 text-center" role="alert">
+                Usuário ou senha incorretos.
+            </div>
+        {% endif %}
+    </form>
+</div>
+
+</body>
+</html>
