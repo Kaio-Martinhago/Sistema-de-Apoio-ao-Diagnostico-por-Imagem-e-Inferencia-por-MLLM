@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -78,7 +78,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'projeto_final', # O nome do banco que você criou com o script
         'USER': 'root',       # Geralmente 'root' no ambiente local
-        'PASSWORD': '2005rosapablo',
+        'PASSWORD': '(0078Kfm#)',
         'HOST': '127.0.0.1',         # Ou 'localhost'
         'PORT': '3306',
     }
@@ -125,3 +125,7 @@ STATIC_URL = 'static/'
 LOGIN_REDIRECT_URL = 'dashboard'  # Nome da rota para onde vai após logar com sucesso
 LOGIN_URL = 'login'               # Nome da rota da tela de login
 LOGOUT_REDIRECT_URL = 'login'     # Nome da rota após sair
+
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

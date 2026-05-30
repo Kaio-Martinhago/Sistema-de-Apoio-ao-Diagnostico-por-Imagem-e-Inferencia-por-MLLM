@@ -1,66 +1,70 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8"><title>Solicitar Exame</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        /* Estilo para a lista suspensa de resultados */
-        #resultadosBusca {
-            position: absolute; z-index: 1000; width: 100%;
-            max-height: 200px; overflow-y: auto; display: none;
-        }
-        .resultado-item { cursor: pointer; }
-        .resultado-item:hover { background-color: #f8f9fa; }
-    </style>
-</head>
-<body class="bg-light">
-<div class="container py-5">
-    <div class="card shadow-sm mx-auto" style="max-width: 700px;">
-        <div class="card-body">
-            <h4 class="mb-4 text-primary">Nova Solicitação de Exame</h4>
+{% extends 'conta/base.html' %}
+
+{% block title %}Nova Solicitação | SADI-AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    #resultadosBusca { position: absolute; z-index: 1000; width: 100%; max-height: 200px; overflow-y: auto; display: none; margin-top: 5px; }
+    .resultado-item { cursor: pointer; }
+    .resultado-item:hover { background-color: #F8FAFC; color: #00D4B2; font-weight: bold; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card card-sadi p-4">
+            <h4 class="mb-4 fw-bold text-dark"><i class="fa-solid fa-file-medical me-2 text-primary"></i>Nova Solicitação de Exame</h4>
             
             <form method="post">
                 {% csrf_token %}
-                
-                <!-- CAMPO DE BUSCA DINÂMICA -->
                 <div class="mb-4 position-relative">
-                    <label class="form-label fw-bold">Buscar Paciente (Nome ou CPF)</label>
+                    <label class="form-label fw-semibold text-secondary">Vincular Paciente</label>
                     <div class="input-group">
-                        <input type="text" id="buscaPaciente" class="form-control" placeholder="Digite para buscar..." autocomplete="off">
-                        <a href="{% url 'cadastro_paciente' %}" class="btn btn-outline-success">+ Novo</a>
+                        <span class="input-group-text bg-light"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" id="buscaPaciente" class="form-control form-control-lg" placeholder="Busque por nome ou CPF..." autocomplete="off">
+                        <a href="{% url 'cadastro_paciente' %}" class="btn btn-outline-secondary d-flex align-items-center"><i class="fa-solid fa-plus me-1"></i> Novo</a>
                     </div>
                     
-                    <!-- A lista suspensa onde o JS vai injetar os resultados -->
-                    <ul id="resultadosBusca" class="list-group shadow"></ul>
+                    <ul id="resultadosBusca" class="list-group shadow-lg rounded"></ul>
                     
-                    <!-- O campo oculto que realmente envia o ID do paciente para o Django -->
                     <input type="hidden" name="paciente_id_hidden" id="pacienteIdHidden" required>
-                    <small id="pacienteSelecionado" class="text-success mt-1 d-block fw-bold"></small>
+                    <small id="pacienteSelecionado" class="text-success mt-2 d-block fw-bold"></small>
                 </div>
-                <hr>
+                
+                <hr class="mb-4">
 
-                <!-- DEMAIS CAMPOS DO EXAME (Renderizados pelo Django) -->
-
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-secondary">Médico Solicitante</label>
+                        <input type="text" class="form-control bg-light text-muted" value="{{ medico_logado.nome_completo }} (CRM: {{ medico_logado.crm }})" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold text-secondary">{{ form.id_equipamento.label }}</label>
+                        {{ form.id_equipamento }}
+                    </div>
+                </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold">Médico Solicitante</label>
-                    <!-- Um input readonly apenas para feedback visual -->
-                    <input type="text" class="form-control bg-light" value="{{ medico_logado.nome_completo }} (CRM: {{ medico_logado.crm }})" readonly>
+                    <label class="form-label fw-semibold text-secondary">{{ form.regiao_corpo.label }}</label>
+                    {{ form.regiao_corpo }}
                 </div>
 
-
-                {{ form.as_p }}
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-secondary">{{ form.observacoes_clinicas.label }}</label>
+                    {{ form.observacoes_clinicas }}
+                </div>
                 
-                <div class="d-flex justify-content-between mt-4">
-                    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancelar</a>
-                    <button type="submit" class="btn btn-primary">Gerar Solicitação</button>
+                <div class="d-flex justify-content-end mt-4 pt-3 border-top">
+                    <button type="submit" class="btn btn-primary px-5 py-2">Gerar Solicitação</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+{% endblock %}
 
-<!-- SCRIPT DO AUTOCOMPLETE -->
+{% block extra_js %}
 <script>
     const inputBusca = document.getElementById('buscaPaciente');
     const listaResultados = document.getElementById('resultadosBusca');
@@ -69,29 +73,24 @@
 
     inputBusca.addEventListener('input', function() {
         const query = this.value;
-
         if (query.length < 1) {
             listaResultados.style.display = 'none';
-            return; // Só busca se tiver 3 ou mais caracteres
+            return;
         }
-
-        // Faz a requisição na nossa API do Django
         fetch(`/api/buscar-pacientes/?q=${query}`)
             .then(response => response.json())
             .then(data => {
-                listaResultados.innerHTML = ''; // Limpa a lista anterior
+                listaResultados.innerHTML = '';
                 if (data.length > 0) {
                     listaResultados.style.display = 'block';
                     data.forEach(paciente => {
                         const li = document.createElement('li');
                         li.className = 'list-group-item resultado-item';
                         li.textContent = `${paciente.nome} (CPF: ${paciente.cpf})`;
-                        
-                        // Quando clica no nome, seleciona o paciente
                         li.onclick = () => {
                             inputBusca.value = paciente.nome;
-                            inputHidden.value = paciente.id; // Guarda o ID no campo oculto
-                            textoSelecionado.textContent = `✓ Selecionado: ${paciente.nome}`;
+                            inputHidden.value = paciente.id;
+                            textoSelecionado.innerHTML = `<i class="fa-solid fa-check-circle"></i> Paciente Selecionado: ${paciente.nome}`;
                             listaResultados.style.display = 'none';
                         };
                         listaResultados.appendChild(li);
@@ -102,12 +101,8 @@
             });
     });
 
-    // Esconde a lista se clicar fora dela
     document.addEventListener('click', function(e) {
-        if (e.target !== inputBusca) {
-            listaResultados.style.display = 'none';
-        }
+        if (e.target !== inputBusca) listaResultados.style.display = 'none';
     });
 </script>
-</body>
-</html>
+{% endblock %}

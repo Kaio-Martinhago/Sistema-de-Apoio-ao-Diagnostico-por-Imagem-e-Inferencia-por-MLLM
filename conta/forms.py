@@ -37,3 +37,45 @@ class MedicoRegistroForm(forms.Form):
     especialidade = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class': 'form-control'}))
     email_institucional = forms.EmailField(required=False, widget=forms.EmailInput(attrs={'class': 'form-control'}))
     senha = forms.CharField(widget=forms.PasswordInput(attrs={'class': 'form-control'}))
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+class MultipleFileField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            result = [single_file_clean(d, initial) for d in data]
+        else:
+            result = [single_file_clean(data, initial)]
+        return result
+
+class MultiplaImagemForm(forms.Form):
+    imagens = MultipleFileField(
+        label='Selecione as imagens do exame (PNG ou JPEG)',
+        widget=MultipleFileInput(attrs={
+            'class': 'form-control', 
+            'accept': 'image/png, image/jpeg'
+        })
+    )
+
+
+class RevisaoLaudoForm(forms.Form):
+    conteudo_final = forms.CharField(
+        label="Laudo Definitivo",
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 8, 'placeholder': 'Edite ou valide o texto gerado pela IA aqui...'})
+    )
+    concordancia = forms.ChoiceField(
+        label="Concordância com o modelo de IA",
+        choices=[('Total', 'Total'), ('Parcial', 'Parcial'), ('Discordante', 'Discordante')],
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    observacao_tecnica = forms.CharField(
+        label="Observações Técnicas / Feedback (Opcional)",
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'O modelo acertou a região, mas errou a gravidade...'})
+    )

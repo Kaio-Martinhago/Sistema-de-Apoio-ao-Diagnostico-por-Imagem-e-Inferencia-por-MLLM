@@ -1,0 +1,58 @@
+{% extends 'conta/base.html' %}
+
+{% block title %}Detalhes do Exame | SADI-AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    .painel-imagens { height: 300px; background: #000; padding: 15px; border-radius: 8px; white-space: nowrap; overflow-x: auto; }
+    .img-radiologia { height: 260px; margin-right: 15px; border: 1px solid #444; display: inline-block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary rounded-pill px-3"><i class="fa-solid fa-arrow-left me-1"></i> Voltar</a>
+</div>
+
+<div class="card card-sadi mb-4 border-0 shadow-sm">
+    <div class="card-body py-3 d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-1 text-success fw-bold"><i class="fa-solid fa-check-circle me-2"></i>{{ exame.id_paciente.nome_completo }}</h5>
+            <span class="text-muted small"><strong>Região:</strong> {{ exame.regiao_corpo }} | <strong>Data:</strong> {{ exame.data_hora_solicitacao|date:"d/m/Y H:i" }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="painel-imagens shadow-sm mb-4">
+    {% for img in imagens %}
+        <img src="{{ img.caminho_armazenamento }}" class="img-radiologia">
+    {% endfor %}
+</div>
+
+<div class="row g-4">
+    <div class="col-md-7">
+        <div class="card card-sadi h-100 p-4 border-top-0" style="border-top: 4px solid #10B981 !important;">
+            <h6 class="fw-bold text-success mb-3">Laudo Médico Definitivo</h6>
+            <p class="text-dark" style="white-space: pre-wrap; font-size: 1.05rem;">{{ laudo.conteudo_final }}</p>
+            <hr class="mt-auto">
+            <div class="text-muted small">
+                <strong>Assinado em:</strong> {{ laudo.data_hora_assinatura|date:"d/m/Y H:i" }}<br>
+                <strong>Médico:</strong> {{ exame.id_medico.nome_completo }}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card card-sadi h-100 p-4 bg-light border-0">
+            <h6 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-robot me-2"></i>Rastreabilidade da Inteligência Artificial</h6>
+            <div class="small text-muted mb-3">
+                <p class="mb-1"><strong>Modelo:</strong> {{ laudo.id_modelo.nome_modelo }} v{{ laudo.id_modelo.versao }}</p>
+                <p class="mb-1"><strong>Tempo:</strong> {{ laudo.id_inferencia.tempo_processamento }}ms</p>
+                <p class="mb-1"><strong>Concordância Médica:</strong> <span class="badge bg-secondary">{{ revisao.concordancia }}</span></p>
+            </div>
+            <strong class="small text-dark d-block border-top pt-2">Output Original Bruto:</strong>
+            <p class="mt-2 text-muted small fst-italic" style="white-space: pre-wrap;">{{ laudo.texto_gerado }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

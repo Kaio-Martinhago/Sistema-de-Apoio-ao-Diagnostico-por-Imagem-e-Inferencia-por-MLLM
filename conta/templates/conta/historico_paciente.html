@@ -1,0 +1,101 @@
+{% extends 'conta/base.html' %}
+
+{% block title %}Histórico do Paciente | SADI-AI{% endblock %}
+
+{% block extra_css %}
+<style>
+    #resultadosBuscaHistorico { position: absolute; z-index: 1000; top: 100%; width: 100%; max-height: 200px; overflow-y: auto; display: none; margin-top: 5px; }
+    .resultado-item { cursor: pointer; }
+    .resultado-item:hover { background-color: #F8FAFC; color: #00D4B2; font-weight: bold; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8 mx-auto">
+        <div class="card card-sadi p-4">
+            <h5 class="fw-bold text-dark mb-3"><i class="fa-solid fa-magnifying-glass me-2"></i>Buscar Histórico Clínico</h5>
+            
+            <form method="GET" action="" id="formBuscaHistorico">
+                <div class="input-group position-relative">
+                    <input type="text" id="buscaPacienteHistorico" name="q" class="form-control form-control-lg" placeholder="Busque por nome ou CPF..." autocomplete="off" value="{{ request.GET.q|default:'' }}">
+                    <button class="btn btn-primary px-4" type="submit">Pesquisar</button>
+                    <ul id="resultadosBuscaHistorico" class="list-group shadow-lg rounded"></ul>
+                </div>
+            </form>
+            
+        </div>
+    </div>
+</div>
+
+{% if exames %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h6 class="text-secondary fw-bold mb-3">Resultados encontrados:</h6>
+        <div class="list-group shadow-sm">
+            {% for exame in exames %}
+            <a href="{% url 'detalhes_exame' exame.pk %}" class="list-group-item list-group-item-action p-3 mb-2 rounded border">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                    <h6 class="mb-1 fw-bold text-dark">{{ exame.id_paciente.nome_completo }} (CPF: {{ exame.id_paciente.cpf }})</h6>
+                    <small class="text-muted">Solicitado em: {{ exame.data_hora_solicitacao|date:"d/m/Y" }}</small>
+                </div>
+                <p class="mb-1 text-secondary small mt-2"><strong>Região:</strong> {{ exame.regiao_corpo }} | <strong>Equipamento:</strong> {{ exame.id_equipamento.nome_equipamento }}</p>
+                <span class="badge bg-success mt-2"><i class="fa-solid fa-check-circle me-1"></i>Ver Laudo Assinado</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% elif request.GET.q %}
+<div class="text-center text-muted mt-5">
+    <i class="fa-solid fa-folder-open fs-1 mb-3 opacity-50"></i>
+    <p>Nenhum histórico encontrado para "{{ request.GET.q }}".</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const inputBuscaHist = document.getElementById('buscaPacienteHistorico');
+    const listaResultadosHist = document.getElementById('resultadosBuscaHistorico');
+    const formHistorico = document.getElementById('formBuscaHistorico');
+
+    inputBuscaHist.addEventListener('input', function() {
+        const query = this.value;
+        if (query.length < 1) {
+            listaResultadosHist.style.display = 'none';
+            return;
+        }
+        
+        // Usamos a mesma API de busca que já existe no Django!
+        fetch(`/api/buscar-pacientes/?q=${query}`)
+            .then(response => response.json())
+            .then(data => {
+                listaResultadosHist.innerHTML = '';
+                if (data.length > 0) {
+                    listaResultadosHist.style.display = 'block';
+                    data.forEach(paciente => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item resultado-item';
+                        li.textContent = `${paciente.nome} (CPF: ${paciente.cpf})`;
+                        
+                        // Ao clicar no nome, ele preenche a barra e já aperta o botão de buscar sozinho
+                        li.onclick = () => {
+                            inputBuscaHist.value = paciente.nome;
+                            listaResultadosHist.style.display = 'none';
+                            formHistorico.submit(); 
+                        };
+                        listaResultadosHist.appendChild(li);
+                    });
+                } else {
+                    listaResultadosHist.style.display = 'none';
+                }
+            });
+    });
+
+    // Fecha a lista se clicar fora
+    document.addEventListener('click', function(e) {
+        if (e.target !== inputBuscaHist) listaResultadosHist.style.display = 'none';
+    });
+</script>
+{% endblock %}

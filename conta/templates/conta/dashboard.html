@@ -1,171 +1,117 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | Diagnóstico por Imagem</title>
-    <!-- Bootstrap 5 CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Chart.js CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { background-color: #f4f6f9; }
-        .card-kpi { border-left: 4px solid #0d6efd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .table-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    </style>
-</head>
-<body>
+{% extends 'conta/base.html' %}
 
-<div class="container-fluid py-4 px-4">
-    
-    <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit">Log Out</button>
-    </form>
+{% block title %}Hub Médico | SADI-AI{% endblock %}
 
-    
-    <h2 class="mb-4 text-secondary">Dashboard Gerencial de IA e Diagnósticos</h2>
-
-    <!-- Linha 1: KPIs (Cards estilo PowerBI) -->
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card card-kpi py-2">
-                <div class="card-body">
-                    <h6 class="text-muted text-uppercase mb-1">Total de Exames</h6>
-                    <h2 class="mb-0 fw-bold">{{ total_exames }}</h2>
-                </div>
+{% block content %}
+<div class="row">
+    <div class="col-xl-8">
+        
+        <div class="card card-sadi mb-4" style="border-top: 4px solid #E11D48;">
+            <div class="card-header bg-white text-dark fw-bold py-3 d-flex align-items-center border-bottom">
+                <i class="fa-solid fa-clipboard-list me-2 text-danger"></i> Aguardando Laudo Médico
+                <span class="badge bg-danger rounded-pill ms-auto">{{ aguardando_laudo|length }}</span>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card card-kpi py-2" style="border-left-color: #198754;">
-                <div class="card-body">
-                    <h6 class="text-muted text-uppercase mb-1">Pacientes Cadastrados</h6>
-                    <h2 class="mb-0 fw-bold">{{ total_pacientes }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card card-kpi py-2" style="border-left-color: #ffc107;">
-                <div class="card-body">
-                    <h6 class="text-muted text-uppercase mb-1">Equipamentos Ativos</h6>
-                    <h2 class="mb-0 fw-bold">{{ equipamentos_ativos }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card card-kpi py-2" style="border-left-color: #dc3545;">
-                <div class="card-body">
-                    <h6 class="text-muted text-uppercase mb-1">Corpo Clínico (Médicos)</h6>
-                    <h2 class="mb-0 fw-bold">{{ total_medicos }}</h2>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Linha 2: Gráfico e Modelos -->
-    <div class="row mb-4">
-        <!-- Gráfico -->
-        <div class="col-md-8">
-            <div class="table-container">
-                <h5 class="mb-3">Volume de Exames por Equipamento</h5>
-                <canvas id="graficoExames" height="100"></canvas>
-            </div>
-        </div>
-        <!-- Tabela de Modelos IA -->
-        <div class="col-md-4">
-            <div class="table-container h-100">
-                <h5 class="mb-3">Modelos de IA Ativos</h5>
-                <ul class="list-group list-group-flush">
-                    {% for modelo in lista_modelos %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                        <div>
-                            <strong>{{ modelo.nome_modelo }}</strong><br>
-                            <small class="text-muted">{{ modelo.arquitetura }}</small>
-                        </div>
-                        <span class="badge bg-primary rounded-pill">v{{ modelo.versao }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- Linha 3: Tabela de Últimos Exames -->
-    <div class="row">
-        <div class="col-12">
-            <div class="table-container">
-                <h5 class="mb-3">Últimos Exames Realizados</h5>
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Data/Hora</th>
-                            <th>Paciente</th>
-                            <th>Médico Solicitante</th>
-                            <th>Região</th>
-                            <th>Equipamento</th>
-                        </tr>
-                    </thead>
+            <div class="card-body p-0 table-responsive">
+                <table class="table mb-0">
+                    <thead class="table-light"><tr><th>Data/Hora</th><th>Paciente</th><th>Região</th><th>Status IA</th><th>Ação</th></tr></thead>
                     <tbody>
-                        {% for exame in ultimos_exames %}
+                        {% for exame in aguardando_laudo %}
                         <tr>
-                            <td>{{ exame.data_hora_solicitacao|date:"d/m/Y H:i" }}</td>
-                            <td>{{ exame.id_paciente.nome_completo }}</td>
-                            <td>{{ exame.id_medico.nome_completo }}</td>
-                            <td><span class="badge bg-secondary">{{ exame.regiao_corpo }}</span></td>
-                            <td>{{exame.id_equipamento.numero_serie}} : {{ exame.id_equipamento.nome_equipamento }}</td>
+                            <td class="small align-middle">{{ exame.data_hora_solicitacao|date:"d/m/Y H:i" }}</td>
+                            <td class="fw-semibold align-middle">{{ exame.id_paciente.nome_completo }}</td>
+                            <td class="align-middle">{{ exame.regiao_corpo }}</td>
+                            <td class="align-middle"><span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1"><i class="fa-solid fa-check me-1"></i> IA Pronta</span></td>
+                            <td class="align-middle"><a href="{% url 'laudar_exame' exame.pk %}" class="btn btn-sm btn-danger px-3">Revisar Laudo</a></td>
                         </tr>
                         {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center">Nenhum exame registrado ainda.</td>
-                        </tr>
+                        <tr><td colspan="5" class="text-center text-muted py-4">Nenhum laudo pendente.</td></tr>
                         {% endfor %}
-                    </tbody>
-
-                    <tbody>
-                        <div class="d-flex justify-content-between mt-4">
-                            <a href="{% url 'cadastro_exame' %}" class="btn btn-outline-secondary">Cadastrar Exame</a>
-                        </div>
                     </tbody>
                 </table>
             </div>
         </div>
+
+        <div class="card card-sadi mb-4" style="border-top: 4px solid #F59E0B;">
+            <div class="card-header bg-white text-dark fw-bold py-3 d-flex align-items-center border-bottom">
+                <i class="fa-solid fa-x-ray me-2 text-warning"></i> Aguardando Aquisição de Imagens
+                <span class="badge bg-warning text-dark rounded-pill ms-auto">{{ aguardando_imagem|length }}</span>
+            </div>
+            <div class="card-body p-0 table-responsive">
+                <table class="table mb-0">
+                    <thead class="table-light"><tr><th>Data Solicit.</th><th>Paciente</th><th>Região</th><th>Ação</th></tr></thead>
+                    <tbody>
+                        {% for exame in aguardando_imagem %}
+                        <tr>
+                            <td class="small align-middle">{{ exame.data_hora_solicitacao|date:"d/m/Y H:i" }}</td>
+                            <td class="fw-semibold align-middle">{{ exame.id_paciente.nome_completo }}</td>
+                            <td class="align-middle">{{ exame.regiao_corpo }}</td>
+                            <td class="align-middle"><a href="{% url 'upload_imagens' exame.pk %}" class="btn btn-sm btn-outline-dark px-3"><i class="fa-solid fa-upload me-1"></i> Anexar DICOM/IMG</a></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center text-muted py-4">Nenhum exame aguardando imagens.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
+    <div class="col-xl-4">
+        {% if em_processamento %}
+        <div class="alert alert-info border-0 shadow-sm rounded d-flex align-items-center mb-4" style="background-color: #E0F2FE; color: #0369A1;">
+            <div class="spinner-border spinner-border-sm me-3" role="status"></div>
+            <div>
+                <strong class="d-block mb-1">Processando {{ em_processamento|length }} exame(s)</strong>
+                <span class="small">A rede LLaVA está analisando. Por favor, aguarde.</span>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card card-sadi" style="border-top: 4px solid #10B981;">
+            <div class="card-header bg-white text-dark fw-bold py-3 border-bottom">
+                <i class="fa-solid fa-clock-rotate-left me-2 text-success"></i> Últimos Exames Concluídos
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for exame in concluidos %}
+                    <a href="{% url 'detalhes_exame' exame.pk %}" class="list-group-item list-group-item-action p-3">
+                        <div class="d-flex w-100 justify-content-between mb-1">
+                            <h6 class="mb-0 fw-bold text-dark">{{ exame.id_paciente.nome_completo }}</h6>
+                            <small class="text-muted">{{ exame.data_hora_solicitacao|date:"d/m" }}</small>
+                        </div>
+                        <p class="mb-1 small text-secondary">{{ exame.regiao_corpo }}</p>
+                    </a>
+                    {% empty %}
+                    <div class="p-4 text-center text-muted small">Nenhum exame concluído ainda.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
 
-<!-- Script para renderizar o Gráfico com os dados do Django -->
-{{ exames_por_equipamento|json_script:"dados-grafico" }}
+{% block extra_js %}
+{% if em_processamento %}
 <script>
-    // Recupera os dados injetados pelo Django de forma segura
-    const dadosBrutos = JSON.parse(document.getElementById('dados-grafico').textContent);
-    
-    // Separa os dados em labels (nomes) e values (quantidades)
-const labels = dadosBrutos.map(item => `${item.nome_equipamento} (SN: ${item.numero_serie})`);
-    const valores = dadosBrutos.map(item => item.total_exames);
+    function checarStatusIA() {
+        fetch("{% url 'check_processamento_api' %}")
+            .then(response => response.json())
+            .then(data => {
+                if (data.processando === false) {
+                    // A IA terminou! Agora sim recarregamos a página uma única vez
+                    window.location.reload();
+                } else {
+                    // A IA ainda está pensando. Pergunta de novo daqui a 5 segundos
+                    setTimeout(checarStatusIA, 5000);
+                }
+            })
+            .catch(error => console.error("Erro ao checar status da IA:", error));
+    }
 
-    // Configura e renderiza o gráfico
-    const ctx = document.getElementById('graficoExames').getContext('2d');
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Qtd. de Exames',
-                data: valores,
-                backgroundColor: 'rgba(13, 110, 253, 0.5)',
-                borderColor: 'rgba(13, 110, 253, 1)',
-                borderWidth: 1,
-                borderRadius: 4
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: { beginAtZero: true }
-            }
-        }
-    });
+    // Inicia o ciclo de perguntas invisíveis 5 segundos após a página carregar
+    setTimeout(checarStatusIA, 5000);
 </script>
-
-</body>
-</html>
+{% endif %}
+{% endblock %}
