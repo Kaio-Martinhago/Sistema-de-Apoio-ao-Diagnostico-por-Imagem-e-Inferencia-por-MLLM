@@ -56,7 +56,7 @@ class ImagemMedica(models.Model):
     caminho_armazenamento = models.CharField(db_column='Caminho_Armazenamento', max_length=255)  # Field name made lowercase.
     resolucao_altura = models.IntegerField(db_column='Resolucao_Altura')  # Field name made lowercase.
     id_exame = models.ForeignKey(Exame, models.DO_NOTHING, db_column='ID_Exame')  # Field name made lowercase.
-
+    id_inferencia = models.ForeignKey('Inferencia', models.DO_NOTHING, db_column='ID_Inferencia', blank=True, null=True)  # Field name made lowercase.
     class Meta:
         managed = False
         db_table = 'imagem_medica'
@@ -67,7 +67,6 @@ class Inferencia(models.Model):
     data_hora_inicio = models.DateTimeField(db_column='Data_Hora_Inicio')  # Field name made lowercase.
     tempo_processamento = models.IntegerField(db_column='Tempo_Processamento')  # Field name made lowercase.
     status_resultado = models.CharField(db_column='Status_Resultado', max_length=30)  # Field name made lowercase.
-    id_imagem = models.ForeignKey(ImagemMedica, models.DO_NOTHING, db_column='ID_Imagem')  # Field name made lowercase.
     id_modelo = models.ForeignKey('ModeloMllm', models.DO_NOTHING, db_column='ID_Modelo')  # Field name made lowercase.
 
     class Meta:

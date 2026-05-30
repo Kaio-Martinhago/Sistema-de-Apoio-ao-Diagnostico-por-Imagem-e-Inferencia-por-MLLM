@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8"><title>Upload de Imagens</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container py-5">
+    <div class="card shadow-sm mx-auto" style="max-width: 600px;">
+        <div class="card-header bg-dark text-white fw-bold">
+            Inserir Imagens ao Exame
+        </div>
+        <div class="card-body">
+            <div class="alert alert-secondary">
+                <strong>Paciente:</strong> {{ exame.id_paciente.nome_completo }}<br>
+                <strong>Região Solicitada:</strong> {{ exame.regiao_corpo }}<br>
+                <strong>Data da Solicitação:</strong> {{ exame.data_hora_solicitacao|date:"d/m/Y H:i" }}
+            </div>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    {{ form.as_p }}
+                    <small class="text-muted d-block mt-2">
+                        Você pode selecionar múltiplos arquivos segurando a tecla CTRL (ou Command) na janela de seleção.
+                    </small>
+                </div>
+
+                <hr>
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-warning fw-bold text-dark">
+                        Finalizar Uploads e Enviar para IA
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
