@@ -1,6 +1,6 @@
 from django.db.models import Count, OuterRef, Subquery
 from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import JsonResponse
 from django.db.models import Q
 from django.utils import timezone
@@ -16,29 +16,47 @@ from django.shortcuts import get_object_or_404
 import os
 import base64
 from django.conf import settings
+from django.db import connection
+from django.contrib import messages
+from django.apps import apps
+import random
+from datetime import timedelta
+
 
 @login_required
 def dashboard(request):
-    # 1. Subquery: Busca a descrição do status mais recente (data_modificacao) para cada exame
+
+    
     ultimo_status_sq = ExameStatus.objects.filter(
         id_exame=OuterRef('pk')
     ).order_by('-data_modificacao').values('id_status__descricao_status')[:1]
 
-    # 2. Anota cada Exame com seu status atual baseado na subquery acima
-    exames_com_status = Exame.objects.annotate(status_atual=Subquery(ultimo_status_sq))
+    # 3. FILTRO PRINCIPAL: Pega TODOS os exames, MAS FILTRA APENAS OS DESTE MÉDICO
 
-    # 3. Filtra os exames para as diferentes "caixas" de trabalho do médico
-    # Mostramos os exames do mais recente para o mais antigo
-    aguardando_imagem = exames_com_status.filter(status_atual='Aguardando Imagem').order_by('-data_hora_solicitacao')
-    em_processamento = exames_com_status.filter(status_atual='Em Processamento IA').order_by('-data_hora_solicitacao')
-    aguardando_laudo = exames_com_status.filter(status_atual='Aguardando Laudo').order_by('-data_hora_solicitacao')
-    concluidos = exames_com_status.filter(status_atual='Concluído').order_by('-data_hora_solicitacao')[:10] # Limita a 10 para não lotar a tela
+    if request.user.is_superuser:
+        medico_logado = None
+        # O Admin (você) vê a carga de trabalho do hospital inteiro
+        exames_base = Exame.objects.all().annotate(status_atual=Subquery(ultimo_status_sq))
+    else:
+        # O Médico vê apenas os exames vinculados ao CRM dele
+        medico_logado = get_object_or_404(Medico, crm=request.user.username)
+        exames_base = Exame.objects.filter(id_medico=medico_logado).annotate(status_atual=Subquery(ultimo_status_sq))
+
+
+    exames_base = Exame.objects.filter(id_medico=medico_logado).annotate(status_atual=Subquery(ultimo_status_sq))
+
+    # 4. Distribui os exames filtrados nas "caixas" da Hub
+    aguardando_imagem = exames_base.filter(status_atual='Aguardando Imagem').order_by('-data_hora_solicitacao')
+    em_processamento = exames_base.filter(status_atual='Em Processamento IA').order_by('-data_hora_solicitacao')
+    aguardando_laudo = exames_base.filter(status_atual='Aguardando Laudo').order_by('-data_hora_solicitacao')
+    concluidos = exames_base.filter(status_atual='Concluído').order_by('-data_hora_solicitacao')[:10]
 
     context = {
         'aguardando_imagem': aguardando_imagem,
         'em_processamento': em_processamento,
         'aguardando_laudo': aguardando_laudo,
         'concluidos': concluidos,
+        'medico_logado': medico_logado, # Passando para a tela para saudações, se quiser usar
     }
 
     return render(request, 'conta/dashboard.html', context)
@@ -161,7 +179,7 @@ def processar_ia_background(inferencia_id, exame_id):
     )
 
     payload = {
-        "model": "llava",
+        "model": "moondream",
         "prompt": prompt,
         "images": imagens_b64,
         "stream": False,
@@ -230,7 +248,7 @@ def upload_imagens(request, exame_id):
 
             if imagens:
                 modelo, _ = ModeloMllm.objects.get_or_create(
-                    nome_modelo='llava', defaults={'versao': '7B', 'arquitetura': 'ViT+LLM'}
+                    nome_modelo='minicpm-v', defaults={'versao': '7B', 'arquitetura': 'ViT+LLM'}
                 )
 
 
@@ -382,3 +400,137 @@ def check_processamento_api(request):
 
     # Retorna True se tiver exames processando, False se a IA já acabou tudo
     return JsonResponse({'processando': qtd_processando > 0})
+
+def is_superuser(user):
+    return user.is_superuser
+
+
+@user_passes_test(is_superuser, login_url='dashboard')
+def painel_banco(request):
+    tabelas_logicas = [
+        'Paciente', 'Medico', 'Equipamento', 'ModeloMllm', 'Status',
+        'Exame', 'ExameStatus', 'ImagemMedica', 'Inferencia', 'Laudo', 'RevisaoLaudo'
+    ]
+    
+    tabela_selecionada = request.GET.get('tabela')
+    cabecalhos = []
+    dados = []
+
+    # Se o usuário clicou em uma tabela, buscamos os dados dela
+    if tabela_selecionada and tabela_selecionada in tabelas_logicas:
+        try:
+            # Pega o modelo do Django dinamicamente pelo nome
+            modelo = apps.get_model('conta', tabela_selecionada)
+            
+            # Pega todos os registros como um dicionário
+            registros = modelo.objects.all().values()
+            
+            if registros.exists():
+                cabecalhos = registros[0].keys()
+                dados = registros
+        except Exception as e:
+            messages.error(request, f"Erro ao buscar dados ou tabela inexistente: {e}")
+
+    context = {
+        'tabelas_logicas': tabelas_logicas,
+        'tabela_selecionada': tabela_selecionada,
+        'cabecalhos': cabecalhos,
+        'dados': dados,
+    }
+    return render(request, 'conta/painel_banco.html', context)
+
+# --- VIEW AÇÃO: Dropar Tabelas ---
+@user_passes_test(is_superuser, login_url='dashboard')
+def dropar_tabelas(request):
+    if request.method == 'POST':
+        # Deleta os usuários criados para os médicos (preservando você, o superuser)
+        User.objects.filter(is_superuser=False).delete()
+
+        # Desativa a checagem de chaves estrangeiras temporariamente para dropar em lote
+        with connection.cursor() as cursor:
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 0;")
+            
+            # Ordem inversa das dependências
+            tabelas_para_dropar = [
+                'revisao_laudo', 'laudo', 'inferencia', 'imagem_medica', 
+                'exame_status', 'exame', 'status', 'modelo_mllm', 
+                'equipamento', 'medico', 'paciente'
+            ]
+            
+            for tabela in tabelas_para_dropar:
+                cursor.execute(f"DROP TABLE IF EXISTS {tabela};")
+                
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 1;")
+            
+        messages.success(request, "Todas as tabelas do modelo lógico foram apagadas com sucesso! O banco está limpo.")
+    
+    return redirect('painel_banco')
+
+# --- VIEW AÇÃO: Criar e Popular ---
+@user_passes_test(is_superuser, login_url='dashboard')
+def recriar_e_popular(request):
+    if request.method == 'POST':
+        try:
+            with connection.cursor() as cursor:
+                # O script SQL exato que você me passou (com a correção do Telefone do Medico e FKs)
+                script_sql = """
+                CREATE TABLE Paciente ( ID_Paciente INTEGER AUTO_INCREMENT PRIMARY KEY, Nome_Completo VARCHAR(150) NOT NULL, CPF CHAR(11) UNIQUE NOT NULL, Data_Nascimento DATE NOT NULL, Sexo VARCHAR(15) NOT NULL, Telefone VARCHAR(20), Email VARCHAR(150));
+                CREATE TABLE Equipamento ( ID_Equipamento INTEGER AUTO_INCREMENT PRIMARY KEY, Numero_Serie VARCHAR(100) UNIQUE NOT NULL, Nome_Equipamento VARCHAR(100) NOT NULL, Status_Operacional VARCHAR(30) NOT NULL, Data_Ultima_Manutencao DATE);
+                CREATE TABLE Medico ( ID_Medico INTEGER AUTO_INCREMENT PRIMARY KEY, Nome_Completo VARCHAR(150) NOT NULL, CRM VARCHAR(20) UNIQUE NOT NULL, UF_CRM CHAR(2) NOT NULL, Especialidade VARCHAR(100) NOT NULL, Email_Institucional VARCHAR(150) NOT NULL);
+                CREATE TABLE Status ( ID_Status INTEGER AUTO_INCREMENT PRIMARY KEY, Descricao_Status VARCHAR(50) NOT NULL);
+                CREATE TABLE Modelo_MLLM ( ID_Modelo INTEGER AUTO_INCREMENT PRIMARY KEY, Nome_Modelo VARCHAR(100) NOT NULL, Versao VARCHAR(50) NOT NULL, Arquitetura VARCHAR(100) NOT NULL);
+                CREATE TABLE Exame ( ID_Exame INTEGER AUTO_INCREMENT PRIMARY KEY, Data_Hora_Solicitacao TIMESTAMP NOT NULL, Regiao_Corpo VARCHAR(100) NOT NULL, Observacoes_Clinicas TEXT, ID_Equipamento INTEGER NOT NULL, ID_Paciente INTEGER NOT NULL, ID_Medico INTEGER NOT NULL);
+                CREATE TABLE Exame_Status ( ID_Exame_Status INTEGER AUTO_INCREMENT PRIMARY KEY, ID_Status INTEGER NOT NULL, ID_Exame INTEGER NOT NULL, data_modificacao TIMESTAMP NOT NULL);
+                CREATE TABLE Inferencia ( ID_Inferencia INTEGER AUTO_INCREMENT PRIMARY KEY, Data_Hora_Inicio TIMESTAMP NOT NULL, Tempo_Processamento INTEGER NOT NULL, Status_Resultado VARCHAR(30) NOT NULL, ID_Modelo INTEGER NOT NULL);
+                CREATE TABLE Imagem_Medica ( ID_Imagem INTEGER AUTO_INCREMENT PRIMARY KEY, Resolucao_Largura INTEGER NOT NULL, Data_Hora_Aquisicao TIMESTAMP NOT NULL, Formato_Arquivo VARCHAR(10) NOT NULL, Tamanho_Arquivo_MB DECIMAL(6,2) NOT NULL, Caminho_Armazenamento VARCHAR(255) NOT NULL, Resolucao_Altura INTEGER NOT NULL, ID_Exame INTEGER NOT NULL, ID_Inferencia INTEGER NULL);
+                CREATE TABLE Laudo ( ID_Laudo INTEGER AUTO_INCREMENT PRIMARY KEY, Conteudo_Final TEXT, Data_Hora_Assinatura TIMESTAMP, Status_Aprovacao VARCHAR(30), Data_Hora_Geracao TIMESTAMP NOT NULL, Texto_Gerado TEXT NOT NULL, Tokens_Consumidos INTEGER NOT NULL, Prompt_Utilizado TEXT NOT NULL, ID_Modelo INTEGER NOT NULL, ID_Inferencia INTEGER NOT NULL);
+                CREATE TABLE Revisao_Laudo ( ID_Revisao INTEGER AUTO_INCREMENT PRIMARY KEY, Data_Hora_Revisao TIMESTAMP NOT NULL, Concordancia VARCHAR(20) NOT NULL, Observacao_Tecnica TEXT, ID_Medico INTEGER NOT NULL, ID_Laudo INTEGER NOT NULL);
+                
+                ALTER TABLE Imagem_Medica ADD CONSTRAINT FK_Imagem_Inferencia FOREIGN KEY (ID_Inferencia) REFERENCES Inferencia (ID_Inferencia) ON DELETE RESTRICT;
+                ALTER TABLE Imagem_Medica ADD CONSTRAINT FK_Imagem_Medica_Exame FOREIGN KEY (ID_Exame) REFERENCES Exame (ID_Exame) ON DELETE RESTRICT;
+                ALTER TABLE Exame ADD CONSTRAINT FK_Exame_Equipamento FOREIGN KEY (ID_Equipamento) REFERENCES Equipamento (ID_Equipamento) ON DELETE RESTRICT;
+                ALTER TABLE Exame ADD CONSTRAINT FK_Exame_Paciente FOREIGN KEY (ID_Paciente) REFERENCES Paciente (ID_Paciente) ON DELETE RESTRICT;
+                ALTER TABLE Exame ADD CONSTRAINT FK_Exame_Medico FOREIGN KEY (ID_Medico) REFERENCES Medico (ID_Medico) ON DELETE RESTRICT;
+                ALTER TABLE Exame_Status ADD CONSTRAINT FK_Exame_Status_Status FOREIGN KEY (ID_Status) REFERENCES Status (ID_Status) ON DELETE RESTRICT;
+                ALTER TABLE Exame_Status ADD CONSTRAINT FK_Exame_Status_Exame FOREIGN KEY (ID_Exame) REFERENCES Exame (ID_Exame) ON DELETE RESTRICT;
+                ALTER TABLE Laudo ADD CONSTRAINT FK_Laudo_Modelo FOREIGN KEY (ID_Modelo) REFERENCES Modelo_MLLM (ID_Modelo) ON DELETE RESTRICT;
+                ALTER TABLE Laudo ADD CONSTRAINT FK_Laudo_Inferencia FOREIGN KEY (ID_Inferencia) REFERENCES Inferencia (ID_Inferencia) ON DELETE RESTRICT;
+                ALTER TABLE Revisao_Laudo ADD CONSTRAINT FK_Revisao_Laudo_Medico FOREIGN KEY (ID_Medico) REFERENCES Medico (ID_Medico) ON DELETE RESTRICT;
+                ALTER TABLE Revisao_Laudo ADD CONSTRAINT FK_Revisao_Laudo_Laudo FOREIGN KEY (ID_Laudo) REFERENCES Laudo (ID_Laudo) ON DELETE RESTRICT;
+                """
+                # Separa os comandos por ; e executa um a um
+                comandos = [c.strip() for c in script_sql.split(';') if c.strip()]
+                for cmd in comandos:
+                    cursor.execute(cmd)
+
+            # --- POPULANDO DADOS BÁSICOS (Status, Equipamentos, Modelos) ---
+            for s in ['Aguardando Imagem', 'Em Processamento IA', 'Aguardando Laudo', 'Concluído']:
+                Status.objects.create(descricao_status=s)
+            
+            ModeloMllm.objects.create(nome_modelo="Moondream", versao="1.8B", arquitetura="CNN+Transformer")
+            Equipamento.objects.create(numero_serie="RX-DEMO", nome_equipamento="Raio-X Digital", status_operacional="Ativo", data_ultima_manutencao=timezone.now())
+
+            # --- POPULANDO MÉDICOS E SEUS ACESSOS NO DJANGO ---
+            senha_padrao = "senha"
+            medicos_info = [
+                {"nome": "Dr. Antonio Carlos", "crm": "111222", "esp": "Radiologia"},
+                {"nome": "Dra. Laura Mendes", "crm": "333444", "esp": "Ortopedia"}
+            ]
+            
+            # String para exibir na tela de sucesso
+            credenciais_msg = f"<strong>Senha padrão para todos os médicos:</strong> {senha_padrao}<br><br>"
+
+            for m in medicos_info:
+                # Cria no MySQL
+                Medico.objects.create(nome_completo=m["nome"], crm=m["crm"], uf_crm="SC", especialidade=m["esp"], email_institucional=f"{m['crm']}@hospital.com")
+                # Cria acesso no Django
+                User.objects.create_user(username=m["crm"], password=senha_padrao)
+                credenciais_msg += f"Médico: {m['nome']} | Login (CRM): <strong>{m['crm']}</strong><br>"
+
+            # O Django exibe essa mensagem renderizando HTML na tela
+            messages.success(request, f"Tabelas recriadas e populadas com sucesso!<br><hr>{credenciais_msg}", extra_tags='safe')
+
+        except Exception as e:
+            messages.error(request, f"Erro ao criar/popular tabelas: {e}")
+
+    return redirect('painel_banco')

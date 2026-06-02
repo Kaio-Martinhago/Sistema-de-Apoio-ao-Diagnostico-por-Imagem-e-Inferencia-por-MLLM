@@ -4,6 +4,12 @@
 
 {% block content %}
 <div class="row">
+            {% if user.is_superuser %}
+                <a href="{% url 'painel_banco' %}" class="btn btn-sm btn-outline-warning me-3">Admin DB</a>
+
+        {% else %}
+
+
     <div class="col-xl-8">
         
         <div class="card card-sadi mb-4" style="border-top: 4px solid #E11D48;">
@@ -56,7 +62,7 @@
         </div>
 
     </div>
-
+    {% endif %}
     <div class="col-xl-4">
         {% if em_processamento %}
         <div class="alert alert-info border-0 shadow-sm rounded d-flex align-items-center mb-4" style="background-color: #E0F2FE; color: #0369A1;">
@@ -115,3 +121,4 @@
 </script>
 {% endif %}
 {% endblock %}
+
