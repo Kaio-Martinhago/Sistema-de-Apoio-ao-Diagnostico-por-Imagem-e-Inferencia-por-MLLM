@@ -35,6 +35,9 @@ class Exame(models.Model):
         managed = False
         db_table = 'exame'
 
+    def __str__(self):
+        return f"(região do corpo: {self.regiao_corpo}) (observações clínicas: {self.observacoes_clinicas})"
+
 
 class ExameStatus(models.Model):
     id_exame_status = models.AutoField(db_column='ID_Exame_Status', primary_key=True)  # Field name made lowercase.
@@ -61,6 +64,9 @@ class ImagemMedica(models.Model):
         managed = False
         db_table = 'imagem_medica'
 
+    def __str__(self):
+        return f"(caminho de armazenamento: {self.caminho_armazenamento}) (tamanho do arquivo (MB): {self.tamanho_arquivo_mb})"
+
 
 class Inferencia(models.Model):
     id_inferencia = models.AutoField(db_column='ID_Inferencia', primary_key=True)  # Field name made lowercase.
@@ -72,6 +78,9 @@ class Inferencia(models.Model):
     class Meta:
         managed = False
         db_table = 'inferencia'
+
+    def __str__(self):
+        return f"(data e hora de início: {self.data_hora_inicio}) (tempo de processamento: {self.tempo_processamento})"
 
 
 class Laudo(models.Model):
@@ -89,6 +98,9 @@ class Laudo(models.Model):
     class Meta:
         managed = False
         db_table = 'laudo'
+
+    def __str__(self):
+        return f"(texto gerado: {self.texto_gerado}) (data e hora de assinatura: {self.data_hora_assinatura})"
 
 
 class Medico(models.Model):

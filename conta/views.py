@@ -114,6 +114,8 @@ def criar_conta_medico(request):
             if not User.objects.filter(username=dados['crm']).exists():
                 # 1. Cria o controle de acesso e senha no Django
                 user = User.objects.create_user(username=dados['crm'], password=dados['senha'])
+                user.first_name = dados['nome_completo'].split()[0]
+                user.save()
                 
                 # 2. Cria os dados médicos na sua tabela MySQL
                 Medico.objects.create(
@@ -228,7 +230,7 @@ def upload_imagens(request, exame_id):
 
             if imagens:
                 modelo, _ = ModeloMllm.objects.get_or_create(
-                    nome_modelo='llava', defaults={'versao': '1.8B', 'arquitetura': 'CNN+Transformer'}
+                    nome_modelo='llava', defaults={'versao': '7B', 'arquitetura': 'ViT+LLM'}
                 )
 
 
