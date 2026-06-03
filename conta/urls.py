@@ -16,4 +16,5 @@ urlpatterns = [
     path('admin-banco/', views.painel_banco, name='painel_banco'),
     path('admin-banco/drop/', views.dropar_tabelas, name='dropar_tabelas'),
     path('admin-banco/popular/', views.recriar_e_popular, name='recriar_e_popular'),
+    path('consultas/', views.consultas_relatorios, name='consultas_relatorios'),
 ]

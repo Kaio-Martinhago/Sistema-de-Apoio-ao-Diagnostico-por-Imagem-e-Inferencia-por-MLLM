@@ -1,0 +1,216 @@
+{% extends 'conta/base.html' %}
+
+{% block title %}Consultas e Relatórios | SADI-AI{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .sql-box { background-color: #1e1e1e; color: #569cd6; font-family: 'Courier New', Courier, monospace; padding: 15px; border-radius: 8px; font-size: 0.85rem; }
+    .sql-keyword { color: #c586c0; font-weight: bold; }
+    .chart-container { position: relative; height: 350px; width: 100%; margin-bottom: 30px; }
+    .nav-pills .nav-link.active { background-color: #0A2540; color: #00D4B2; font-weight: bold; }
+    .nav-pills .nav-link { color: #64748B; font-weight: 500; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h4 class="fw-bold text-dark"><i class="fa-solid fa-chart-pie me-2 text-primary"></i> Business Intelligence & Analytics</h4>
+        <p class="text-muted">Consultas analíticas sumarizadas do banco de dados relacional.</p>
+    </div>
+</div>
+
+<div class="d-flex gap-4 mb-4 p-3 rounded shadow-sm text-light" style="background-color: #1e1e1e; font-size: 0.9rem; border-left: 4px solid #00D4B2;">
+    <span class="fw-bold text-uppercase"><i class="fa-solid fa-code me-2"></i>Legenda Sintaxe SQL:</span>
+    <span><span class="text-danger fw-bold">■</span> Tabelas do Banco</span>
+    <span><span class="text-warning fw-bold">■</span> Funções de Agregação</span>
+    <span><span class="text-info fw-bold">■</span> Comandos e Cláusulas</span>
+</div>
+
+<div class="card card-sadi p-4">
+    <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#consulta1" type="button"><i class="fa-solid fa-server me-1"></i> Consulta 1: Modelos de IA</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#consulta2" type="button"><i class="fa-solid fa-x-ray me-1"></i> Consulta 2: Equipamentos</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="pill" data-bs-target="#consulta3" type="button"><i class="fa-solid fa-user-doctor me-1"></i> Consulta 3: Aceitação Clínica</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="pills-tabContent">
+        
+        <div class="tab-pane fade show active" id="consulta1" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <h5 class="fw-bold text-dark mb-2">Desempenho e Custo dos Modelos MLLM</h5>
+                    <p class="text-muted small mb-4"><strong>Objetivo:</strong> Avaliar a eficiência e o custo computacional médio dos diferentes modelos de Inteligência Artificial utilizados, mapeando o tempo de processamento e a quantidade de tokens gastos (Tabelas: <code>modelo_mllm</code>, <code>inferencia</code>, <code>laudo</code>).</p>
+                    
+                    <div class="chart-container">
+                        <canvas id="grafico1"></canvas>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="sql-box mb-4">
+                        <span class="text-muted">/* Código SQL Executado no Servidor */</span><br><br>
+                        <span class="text-info">SELECT</span> <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;m.Nome_Modelo, <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-warning">COUNT</span>(i.ID_Inferencia) <span class="text-info">AS</span> Total_Inferencias, <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;ROUND(<span class="text-warning">AVG</span>(i.Tempo_Processamento), 0) <span class="text-info">AS</span> Tempo_Medio_MS, <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;ROUND(<span class="text-warning">AVG</span>(l.Tokens_Consumidos), 0) <span class="text-info">AS</span> Media_Tokens <br>
+                        <span class="text-info">FROM</span> <span class="text-danger fw-bold">modelo_mllm</span> m <br>
+                        <span class="text-info">JOIN</span> <span class="text-danger fw-bold">inferencia</span> i <span class="text-info">ON</span> m.ID_Modelo = i.ID_Modelo <br>
+                        <span class="text-info">JOIN</span> <span class="text-danger fw-bold">laudo</span> l <span class="text-info">ON</span> i.ID_Inferencia = l.ID_Inferencia <br>
+                        <span class="text-info">GROUP BY</span> m.Nome_Modelo;
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped small">
+                            <thead class="table-dark"><tr><th>Modelo MLLM</th><th>Total Inferências</th><th>Tempo Médio (ms)</th><th>Média de Tokens</th></tr></thead>
+                            <tbody>
+                                {% for row in dados_q1 %}
+                                <tr><td>{{ row.Nome_Modelo }}</td><td>{{ row.Total_Inferencias }}</td><td>{{ row.Tempo_Medio_MS }}ms</td><td>{{ row.Media_Tokens }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="consulta2" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <h5 class="fw-bold text-dark mb-2">Carga Operacional por Equipamento</h5>
+                    <p class="text-muted small mb-4"><strong>Objetivo:</strong> Analisar a utilização da infraestrutura hospitalar, exibindo o total de exames realizados e a soma do volume de dados em disco (MB) gerado por cada máquina (Tabelas: <code>equipamento</code>, <code>exame</code>, <code>imagem_medica</code>).</p>
+                    
+                    <div class="chart-container">
+                        <canvas id="grafico2"></canvas>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="sql-box mb-4">
+                        <span class="text-muted">/* Código SQL Executado no Servidor */</span><br><br>
+                        <span class="text-info">SELECT</span> <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;eq.Nome_Equipamento, <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-warning">COUNT</span>(DISTINCT ex.ID_Exame) <span class="text-info">AS</span> Total_Exames, <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;ROUND(<span class="text-warning">SUM</span>(im.Tamanho_Arquivo_MB), 2) <span class="text-info">AS</span> Volume_Total_MB <br>
+                        <span class="text-info">FROM</span> <span class="text-danger fw-bold">equipamento</span> eq <br>
+                        <span class="text-info">JOIN</span> <span class="text-danger fw-bold">exame</span> ex <span class="text-info">ON</span> eq.ID_Equipamento = ex.ID_Equipamento <br>
+                        <span class="text-info">JOIN</span> <span class="text-danger fw-bold">imagem_medica</span> im <span class="text-info">ON</span> ex.ID_Exame = im.ID_Exame <br>
+                        <span class="text-info">GROUP BY</span> eq.Nome_Equipamento;
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped small">
+                            <thead class="table-dark"><tr><th>Nome do Equipamento</th><th>Total de Exames</th><th>Volume Total (MB)</th></tr></thead>
+                            <tbody>
+                                {% for row in dados_q2 %}
+                                <tr><td>{{ row.Nome_Equipamento }}</td><td>{{ row.Total_Exames }}</td><td>{{ row.Volume_Total_MB }} MB</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="consulta3" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-6">
+                    <h5 class="fw-bold text-dark mb-2">Aceitação Clínica e Auditoria</h5>
+                    <p class="text-muted small mb-4"><strong>Objetivo:</strong> Quantificar o nível de precisão da IA através das revisões médicas (concordâncias e discordâncias) em laudos gerados (Tabelas: <code>revisao_laudo</code>, <code>medico</code>, <code>laudo</code>).</p>
+                    
+                    <div class="chart-container">
+                        <canvas id="grafico3"></canvas>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="sql-box mb-4">
+                        <span class="text-muted">/* Código SQL Executado no Servidor */</span><br><br>
+                        <span class="text-info">SELECT</span> <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;rl.Concordancia, <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;<span class="text-warning">COUNT</span>(rl.ID_Revisao) <span class="text-info">AS</span> Quantidade_Revisoes, <br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;ROUND(<span class="text-warning">AVG</span>(l.Tokens_Consumidos), 0) <span class="text-info">AS</span> Media_Tokens_Gastos <br>
+                        <span class="text-info">FROM</span> <span class="text-danger fw-bold">revisao_laudo</span> rl <br>
+                        <span class="text-info">JOIN</span> <span class="text-danger fw-bold">medico</span> m <span class="text-info">ON</span> rl.ID_Medico = m.ID_Medico <br>
+                        <span class="text-info">JOIN</span> <span class="text-danger fw-bold">laudo</span> l <span class="text-info">ON</span> rl.ID_Laudo = l.ID_Laudo <br>
+                        <span class="text-info">GROUP BY</span> rl.Concordancia <br>
+                        <span class="text-info">ORDER BY</span> Quantidade_Revisoes DESC;
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped small">
+                            <thead class="table-dark"><tr><th>Nível de Concordância</th><th>Quantidade de Revisões</th><th>Média de Tokens IA</th></tr></thead>
+                            <tbody>
+                                {% for row in dados_q3 %}
+                                <tr><td>{{ row.Concordancia }}</td><td>{{ row.Quantidade_Revisoes }}</td><td>{{ row.Media_Tokens_Gastos }}</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Carrega os dados JSON gerados no backend pelo Django
+    const rawData1 = {{ json_q1|safe }};
+    const rawData2 = {{ json_q2|safe }};
+    const rawData3 = {{ json_q3|safe }};
+
+    // --- GRÁFICO 1: Barras (Tempo de Processamento) ---
+    const ctx1 = document.getElementById('grafico1').getContext('2d');
+    new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: rawData1.map(item => item.Nome_Modelo),
+            datasets: [{
+                label: 'Tempo Médio de Processamento (ms)',
+                data: rawData1.map(item => item.Tempo_Medio_MS),
+                backgroundColor: 'rgba(0, 212, 178, 0.7)',
+                borderColor: 'rgba(0, 212, 178, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // --- GRÁFICO 2: Doughnut (Volume de Arquivos em MB) ---
+    const ctx2 = document.getElementById('grafico2').getContext('2d');
+    new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: rawData2.map(item => item.Nome_Equipamento),
+            datasets: [{
+                label: 'Volume de Dados (MB)',
+                data: rawData2.map(item => item.Volume_Total_MB),
+                backgroundColor: ['#0A2540', '#E11D48', '#F59E0B'],
+                borderWidth: 0
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    // --- GRÁFICO 3: Pie (Concordância dos Médicos) ---
+    const ctx3 = document.getElementById('grafico3').getContext('2d');
+    new Chart(ctx3, {
+        type: 'pie',
+        data: {
+            labels: rawData3.map(item => item.Concordancia),
+            datasets: [{
+                label: 'Qtd de Revisões',
+                data: rawData3.map(item => item.Quantidade_Revisoes),
+                backgroundColor: ['#10B981', '#3B82F6', '#EF4444'],
+                borderWidth: 0
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+</script>
+{% endblock %}

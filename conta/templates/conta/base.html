@@ -36,13 +36,32 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-4">
                 <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}"><i class="fa-solid fa-layer-group me-1"></i> Painel Principal</a></li>
+                
+                {% if not user.is_superuser %}
                 <li class="nav-item"><a class="nav-link" href="{% url 'cadastro_exame' %}"><i class="fa-solid fa-plus me-1"></i> Nova Solicitação</a></li>
+                {% endif %}
+                
                 <li class="nav-item"><a class="nav-link" href="{% url 'historico_paciente' %}"><i class="fa-solid fa-magnifying-glass me-1"></i> Histórico de Pacientes</a></li>
+                
+                <li class="nav-item"><a class="nav-link" href="{% url 'consultas_relatorios' %}"><i class="fa-solid fa-chart-pie me-1"></i> Consultas </a></li>
             </ul>
         </div>
 
         <div class="d-flex text-light align-items-center">
-            <span class="me-3">Usuário: {{ user.username }}</span>
+            
+            {% if user.is_superuser %}
+                <span class="small fw-medium me-3"><i class="fa-solid fa-user-shield me-1 text-warning"></i> admin: {{ user.username }}</span>
+            {% else %}
+                <span class="small fw-medium me-3">
+                    {% if user.first_name|slice:"-1:" == "a" or user.first_name|slice:"-1:" == "A" %}
+                        Dra.
+                    {% else %}
+                        Dr.
+                    {% endif %}
+                    {{ user.first_name|default:user.username }}
+                </span>
+            {% endif %}
+
             <form action="{% url 'logout' %}" method="post" class="d-inline">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-outline-light rounded-pill px-3"><i class="fa-solid fa-arrow-right-from-bracket"></i></button>
@@ -55,6 +74,8 @@
     {% block content %}
     {% endblock %}
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 {% block extra_js %}
 {% endblock %}

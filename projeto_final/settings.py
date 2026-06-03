@@ -78,7 +78,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'projeto_final', # O nome do banco que você criou com o script
         'USER': 'root',       # Geralmente 'root' no ambiente local
-        'PASSWORD': '2005rosapablo',
+        'PASSWORD': 'sua_senha',
         'HOST': '127.0.0.1',         # Ou 'localhost'
         'PORT': '3306',
     }
@@ -109,7 +109,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
 

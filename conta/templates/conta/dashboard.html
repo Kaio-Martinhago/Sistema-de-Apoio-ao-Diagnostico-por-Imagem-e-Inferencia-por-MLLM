@@ -4,12 +4,6 @@
 
 {% block content %}
 <div class="row">
-            {% if user.is_superuser %}
-                <a href="{% url 'painel_banco' %}" class="btn btn-sm btn-outline-warning me-3">Admin DB</a>
-
-        {% else %}
-
-
     <div class="col-xl-8">
         
         <div class="card card-sadi mb-4" style="border-top: 4px solid #E11D48;">
@@ -60,9 +54,8 @@
                 </table>
             </div>
         </div>
-
     </div>
-    {% endif %}
+
     <div class="col-xl-4">
         {% if em_processamento %}
         <div class="alert alert-info border-0 shadow-sm rounded d-flex align-items-center mb-4" style="background-color: #E0F2FE; color: #0369A1;">
@@ -106,19 +99,14 @@
             .then(response => response.json())
             .then(data => {
                 if (data.processando === false) {
-                    // A IA terminou! Agora sim recarregamos a página uma única vez
                     window.location.reload();
                 } else {
-                    // A IA ainda está pensando. Pergunta de novo daqui a 5 segundos
                     setTimeout(checarStatusIA, 5000);
                 }
             })
             .catch(error => console.error("Erro ao checar status da IA:", error));
     }
-
-    // Inicia o ciclo de perguntas invisíveis 5 segundos após a página carregar
     setTimeout(checarStatusIA, 5000);
 </script>
 {% endif %}
 {% endblock %}
-

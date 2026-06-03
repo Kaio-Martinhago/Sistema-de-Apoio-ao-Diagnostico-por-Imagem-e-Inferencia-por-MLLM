@@ -1,113 +1,118 @@
+{% extends 'conta/base.html' %}
 
+{% block title %}Admin de Banco de Dados | SADI-AI{% endblock %}
 
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8"><title>Admin de Banco de Dados</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .table-responsive { max-height: 500px; overflow-y: auto; }
-        .danger-zone { border: 2px dashed #dc3545; padding: 20px; border-radius: 8px; background-color: #fff5f5; }
-        thead { position: sticky; top: 0; background-color: #343a40; color: white; z-index: 1; }
-    </style>
-</head>
-<body class="bg-light">
+{% block extra_css %}
+<style>
+    .danger-zone { border: 2px dashed #E11D48; background-color: #FFF1F2; border-radius: 12px; }
+    .table-container { max-height: 60vh; overflow-y: auto; }
+    .table-container thead th { position: sticky; top: 0; background-color: #0A2540; color: #fff; z-index: 1; font-weight: 600; font-size: 0.85rem; letter-spacing: 0.5px; }
+    .list-group-item.active { background-color: #00D4B2 !important; border-color: #00D4B2 !important; color: #0A2540 !important; font-weight: bold; }
+</style>
+{% endblock %}
 
-<nav class="navbar navbar-dark bg-dark mb-4">
-    <div class="container-fluid">
-        <span class="navbar-brand mb-0 h1">SADI-IA | Administração do Banco (Superusuário)</span>
-        <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm">Voltar ao Hub</a>
+{% block content %}
+<div class="row mb-3">
+    <div class="col-12">
+        <h4 class="fw-bold text-dark"><i class="fa-solid fa-server me-2 text-primary"></i>Centro de Controle do Banco de Dados (Superuser)</h4>
     </div>
-</nav>
+</div>
 
-<div class="container pb-5">
-    
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{% if message.tags == 'safe success' %}success{% elif message.tags == 'error' %}danger{% else %}info{% endif %} alert-dismissible fade show shadow-sm" role="alert">
-                {% if 'safe' in message.tags %}
-                    {{ message|safe }}
-                {% else %}
-                    {{ message }}
-                {% endif %}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'safe success' %}success{% elif message.tags == 'error' %}danger{% else %}info{% endif %} alert-dismissible fade show shadow-sm border-0" role="alert">
+            {% if 'safe' in message.tags %}
+                {{ message|safe }}
+            {% else %}
+                <i class="fa-solid fa-circle-info me-2"></i> {{ message }}
+            {% endif %}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
 
-    <div class="row">
-        <div class="col-md-4">
-            <div class="danger-zone shadow-sm mb-4">
-                <h5 class="text-danger fw-bold mb-3">⚠️ Zona de Perigo</h5>
-                
-                <form action="{% url 'dropar_tabelas' %}" method="post" onsubmit="return confirm('ATENÇÃO: Você tem certeza que deseja APAGAR todas as tabelas lógicas e seus dados? Isso não pode ser desfeito.');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger w-100 mb-3 fw-bold">1. DROP ALL (Apagar Tudo)</button>
-                </form>
+<div class="row g-4">
+    <div class="col-md-4">
+        
+        <div class="danger-zone p-4 shadow-sm mb-4">
+            <h5 class="text-danger fw-bold mb-3"><i class="fa-solid fa-triangle-exclamation me-2"></i>Zona de Perigo</h5>
+            
+            <form action="{% url 'dropar_tabelas' %}" method="post" onsubmit="return confirm('ATENÇÃO EXTREMA: Deseja apagar o banco?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger w-100 mb-3 fw-bold shadow-sm"><i class="fa-solid fa-trash-can me-2"></i> DROP ALL (Apagar Tudo)</button>
+            </form>
 
-                <form action="{% url 'recriar_e_popular' %}" method="post">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-primary w-100 fw-bold">2. Criar Tabelas e Popular</button>
-                </form>
-                <small class="d-block mt-3 text-muted">A população gerará modelos IA, equipamentos, status e contas de médicos de teste com senhas visíveis após a conclusão.</small>
-            </div>
-
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white fw-bold">Tabelas Disponíveis</div>
-                <div class="list-group list-group-flush">
-                    {% for tab in tabelas_logicas %}
-                        <a href="?tabela={{ tab }}" class="list-group-item list-group-item-action {% if tabela_selecionada == tab %}active{% endif %}">
-                            <i class="bi bi-table"></i> {{ tab }}
-                        </a>
-                    {% endfor %}
-                </div>
-            </div>
+            <form action="{% url 'recriar_e_popular' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-dark w-100 fw-bold shadow-sm"><i class="fa-solid fa-database me-2"></i> Criar Tabelas e Popular</button>
+            </form>
+            <small class="d-block mt-3 text-muted" style="font-size: 0.8rem;">Isso gerará os dados e acessos básicos necessários para os testes do modelo MLLM.</small>
         </div>
 
-        <div class="col-md-8">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header bg-dark text-white fw-bold">
-                    Visualizador de Registros {% if tabela_selecionada %} - Tabela: {{ tabela_selecionada }}{% endif %}
-                </div>
-                <div class="card-body p-0">
-                    {% if tabela_selecionada %}
-                        {% if dados %}
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped mb-0 text-nowrap" style="font-size: 0.85rem;">
-                                    <thead>
+        <div class="card card-sadi">
+            <div class="card-header bg-white text-dark fw-bold border-bottom py-3">
+                <i class="fa-solid fa-table me-2"></i> Tabelas Lógicas
+            </div>
+            <div class="list-group list-group-flush rounded-bottom">
+                {% for tab in tabelas_logicas %}
+                    <a href="?tabela={{ tab }}" class="list-group-item list-group-item-action py-3 {% if tabela_selecionada == tab %}active{% endif %}">
+                        <i class="fa-solid fa-chevron-right me-2" style="font-size: 0.7rem;"></i> {{ tab }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card card-sadi h-100">
+            <div class="card-header bg-white text-dark fw-bold py-3 border-bottom d-flex justify-content-between align-items-center">
+                <span><i class="fa-solid fa-eye me-2 text-primary"></i>Visualizador de Registros</span>
+                {% if tabela_selecionada %}<span class="badge bg-light text-dark border px-3 py-2">Tabela: {{ tabela_selecionada }}</span>{% endif %}
+            </div>
+            
+            <div class="card-body p-0">
+                {% if tabela_selecionada %}
+                    {% if not tabela_existe %}
+                        <div class="p-5 text-center text-danger">
+                            <i class="fa-solid fa-ban fs-1 mb-3 opacity-75"></i>
+                            <h5 class="fw-bold">Tabela Inexistente</h5>
+                            <p class="mb-0">A tabela <strong>{{ tabela_selecionada }}</strong> não existe no banco de dados. Você provavelmente executou o DROP ALL e precisa recriá-las.</p>
+                        </div>
+                    {% elif dados %}
+                        <div class="table-container">
+                            <table class="table table-hover table-striped mb-0 text-nowrap" style="font-size: 0.85rem;">
+                                <thead>
+                                    <tr>
+                                        {% for header in cabecalhos %}
+                                            <th>{{ header|title }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for linha in dados %}
                                         <tr>
-                                            {% for header in cabecalhos %}
-                                                <th>{{ header|title }}</th>
+                                            {% for chave, valor in linha.items %}
+                                                <td class="align-middle">{{ valor }}</td>
                                             {% endfor %}
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for linha in dados %}
-                                            <tr>
-                                                {% for chave, valor in linha.items %}
-                                                    <td>{{ valor }}</td>
-                                                {% endfor %}
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        {% else %}
-                            <div class="p-4 text-center text-muted">
-                                A tabela <strong>{{ tabela_selecionada }}</strong> existe, mas está vazia.
-                            </div>
-                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     {% else %}
                         <div class="p-5 text-center text-muted">
-                            Selecione uma tabela no menu ao lado para visualizar seus dados em tempo real.
+                            <i class="fa-regular fa-folder-open fs-1 mb-3 opacity-50"></i>
+                            <p class="mb-0">A tabela <strong>{{ tabela_selecionada }}</strong> está estruturada, mas não possui nenhum registro.</p>
                         </div>
                     {% endif %}
-                </div>
+                {% else %}
+                    <div class="p-5 text-center text-muted mt-5">
+                        <i class="fa-solid fa-arrow-pointer fs-1 mb-3 opacity-50"></i>
+                        <p>Selecione uma tabela no menu lateral para extrair seus registros em tempo real.</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+{% endblock %}
