@@ -23,7 +23,6 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // O Django gera os IDs dos forms baseados nos nomes. "id_cpf" e "id_telefone".
         const cpfInput = document.getElementById('id_cpf');
         const telInput = document.getElementById('id_telefone');
 
@@ -31,7 +30,7 @@
         if (cpfInput) {
             cpfInput.setAttribute('maxlength', '14'); // Limita a quantidade de dígitos no HTML
             cpfInput.addEventListener('input', function() {
-                let v = this.value.replace(/\D/g, ""); // Remove tudo que NÃO é número
+                let v = this.value.replace(/\D/g, ""); // Remove tudo que não é número
                 if (v.length > 11) v = v.slice(0, 11); // Trava em 11 números reais
                 // Aplica a formatação visual
                 v = v.replace(/(\d{3})(\d)/, "$1.$2");
@@ -53,10 +52,7 @@
             });
         }
 
-        // LIMPEZA ANTES DE ENVIAR PRO BANCO DE DADOS
         document.getElementById('formCadastroPaciente').addEventListener('submit', function() {
-            // Removemos os pontos e traços 1 milissegundo antes de enviar pro Django,
-            // assim o seu banco de dados recebe os dados limpos como sempre!
             if (cpfInput) cpfInput.value = cpfInput.value.replace(/\D/g, "");
             if (telInput) telInput.value = telInput.value.replace(/\D/g, "");
         });

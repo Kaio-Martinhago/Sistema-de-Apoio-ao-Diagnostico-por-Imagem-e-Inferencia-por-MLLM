@@ -36,12 +36,10 @@
     <form method="post" id="formCriarConta">
         {% csrf_token %}
         
-        <!-- Renderização manual de cada campo para controle total da tela -->
         {% for field in form %}
             <div class="mb-3">
                 <label for="{{ field.id_for_label }}" class="form-label text-dark fw-medium small mb-1">{{ field.label }}</label>
                 {{ field }}
-                <!-- O erro de cada campo agora cai EXATAMENTE embaixo do input correto -->
                 {% if field.errors %}
                     {{ field.errors }}
                 {% endif %}
@@ -66,7 +64,6 @@
             });
         }
 
-        // 2. CONVERSÃO DO UF PARA DROPDOWN (MENU SUSPENSO)
         const ufInput = document.getElementById('id_uf_crm'); 
         if (ufInput) {
             const selectUF = document.createElement('select');
@@ -85,14 +82,12 @@
             opcaoPadrao.text = 'Selecione o UF';
             selectUF.appendChild(opcaoPadrao);
 
-            // Resgata o valor que já estava preenchido (útil caso a página recarregue com erro no CRM)
             const valorAtual = ufInput.value.toUpperCase();
 
             estadosBR.forEach(function(uf) {
                 const opcao = document.createElement('option');
                 opcao.value = uf;
                 opcao.text = uf;
-                // Se o estado for igual ao que o usuário já tinha tentado enviar, deixa ele selecionado
                 if (uf === valorAtual) {
                     opcao.selected = true;
                 }

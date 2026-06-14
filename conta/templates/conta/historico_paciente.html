@@ -67,7 +67,6 @@
             return;
         }
         
-        // Usamos a mesma API de busca que já existe no Django!
         fetch(`/api/buscar-pacientes/?q=${query}`)
             .then(response => response.json())
             .then(data => {
@@ -79,7 +78,6 @@
                         li.className = 'list-group-item resultado-item';
                         li.textContent = `${paciente.nome} (CPF: ${paciente.cpf})`;
                         
-                        // Ao clicar no nome, ele preenche a barra e já aperta o botão de buscar sozinho
                         li.onclick = () => {
                             inputBuscaHist.value = paciente.nome;
                             listaResultadosHist.style.display = 'none';
@@ -93,7 +91,6 @@
             });
     });
 
-    // Fecha a lista se clicar fora
     document.addEventListener('click', function(e) {
         if (e.target !== inputBuscaHist) listaResultadosHist.style.display = 'none';
     });

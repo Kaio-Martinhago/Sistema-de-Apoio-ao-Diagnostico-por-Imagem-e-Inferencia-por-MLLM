@@ -77,8 +77,8 @@ WSGI_APPLICATION = 'projeto_final.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'projeto_final', # O nome do banco que você criou com o script
-        'USER': 'root',       # Geralmente 'root' no ambiente local
+        'NAME': 'projeto_final_kaio_pablo',
+        'USER': 'root',
         'PASSWORD': 'sua_senha',
         'HOST': '127.0.0.1',         # Ou 'localhost'
         'PORT': '3306',

@@ -27,7 +27,7 @@ from datetime import timedelta
 
 @login_required
 def dashboard(request):
-    # 1. INTERCEPTAÇÃO: Se for admin/superuser, vai direto pro DB e não carrega a dashboard!
+    # Se for admin/superuser, vai direto pro DB e não carrega a dashboard
     if request.user.is_superuser:
         return redirect('painel_banco')
         
@@ -58,11 +58,6 @@ def dashboard(request):
 def buscar_paciente_api(request):
     query = request.GET.get('q', '')
     if query:
-        # Busca por nome OU cpf, limitando a 10 resultados para não travar a tela
-        #pacientes = Paciente.objects.filter(
-        #    Q(nome_completo__icontains=query) | Q(cpf__icontains=query)
-        #)[:10]
-        # Agora busca apenas nomes ou CPFs que COMEÇAM com o que foi digitado
         pacientes = Paciente.objects.filter(
             Q(nome_completo__istartswith=query) | Q(cpf__startswith=query)
         )[:10]
@@ -78,7 +73,7 @@ def cadastro_paciente(request):
         form = PacienteForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('cadastro_exame') # Cadastrou? Vai direto para solicitar o exame
+            return redirect('cadastro_exame')
     else:
         form = PacienteForm()
     
@@ -91,14 +86,14 @@ def cadastro_exame(request):
 
     if request.method == 'POST':
         form = ExameForm(request.POST)
-        paciente_id = request.POST.get('paciente_id_hidden') # Pega o ID que o JS escondeu
+        paciente_id = request.POST.get('paciente_id_hidden')
         
         if form.is_valid() and paciente_id:
-            exame = form.save(commit=False) # Prepara para salvar, mas não salva ainda
+            exame = form.save(commit=False)
             exame.id_paciente = Paciente.objects.get(pk=paciente_id)
             exame.id_medico = medico_logado
             exame.data_hora_solicitacao = timezone.now()
-            exame.save() # Agora salva no banco
+            exame.save()
 
 
             status_inicial, _ = Status.objects.get_or_create(descricao_status='Aguardando Imagem')
@@ -123,12 +118,12 @@ def criar_conta_medico(request):
             
             # Verifica se já existe um usuário com esse CRM (username)
             if not User.objects.filter(username=dados['crm']).exists():
-                # 1. Cria o controle de acesso e senha no Django
+                # Cria o controle de acesso e senha no Django
                 user = User.objects.create_user(username=dados['crm'], password=dados['senha'])
                 user.first_name = dados['nome_completo'].split()[0]
                 user.save()
                 
-                # 2. Cria os dados médicos na sua tabela MySQL
+                # Cria os dados médicos na sua tabela MySQL
                 Medico.objects.create(
                     nome_completo=dados['nome_completo'],
                     crm=dados['crm'],
@@ -154,7 +149,6 @@ def processar_ia_background(inferencia_id, exame_id):
 
     imagens_b64 = []
     for img in imagens:
-        # Extrai o nome do arquivo a partir da URL (/media/nome_arquivo.png)
         nome_arquivo = img.caminho_armazenamento.split('/')[-1]
         caminho_local = os.path.join(settings.MEDIA_ROOT, nome_arquivo)
 
@@ -172,7 +166,7 @@ def processar_ia_background(inferencia_id, exame_id):
     )
 
     payload = {
-        "model": "llava:13b",
+        "model": "llava",
         "prompt": prompt,
         "images": imagens_b64,
         "stream": False,
@@ -226,7 +220,7 @@ def processar_ia_background(inferencia_id, exame_id):
     )
 
 
-# --- VIEW: TELA DE UPLOAD ---
+# VIEW: Tela do upload
 @login_required
 def upload_imagens(request, exame_id):
     exame = get_object_or_404(Exame, pk=exame_id)
@@ -241,7 +235,7 @@ def upload_imagens(request, exame_id):
 
             if imagens:
                 modelo, _ = ModeloMllm.objects.get_or_create(
-                    nome_modelo='llava:13b', defaults={'versao': '13B', 'arquitetura': 'ViT+LLM'}
+                    nome_modelo='llava', defaults={'versao': '7B', 'arquitetura': 'ViT+LLM'}
                 )
 
 
@@ -252,7 +246,7 @@ def upload_imagens(request, exame_id):
                     id_modelo=modelo
                 )
 
-                # 3. Salva todas as imagens enviadas e conecta à Inferência!
+                # Salva todas as imagens enviadas e conecta à Inferência
                 fs = FileSystemStorage()
                 for img in imagens:
                     filename = fs.save(img.name, img)
@@ -260,17 +254,17 @@ def upload_imagens(request, exame_id):
                     tamanho_mb = img.size / (1024 * 1024)
 
                     ImagemMedica.objects.create(
-                        resolucao_largura=1024, # Poderia extrair com lib Pillow
+                        resolucao_largura=1024,
                         resolucao_altura=1024,
                         data_hora_aquisicao=timezone.now(),
                         formato_arquivo=img.name.split('.')[-1].upper()[:10],
                         tamanho_arquivo_mb=tamanho_mb,
                         caminho_armazenamento=caminho_arquivo,
                         id_exame=exame,
-                        id_inferencia=inferencia # Conecta a imagem à inferência única!
+                        id_inferencia=inferencia
                     )
 
-                # 4. Atualiza o status do exame para "Em Processamento IA"
+                # Atualiza o status do exame para "Em Processamento IA"
                 status_proc, _ = Status.objects.get_or_create(descricao_status='Em Processamento IA')
                 ExameStatus.objects.create(
                     id_status=status_proc,
@@ -278,7 +272,7 @@ def upload_imagens(request, exame_id):
                     data_modificacao=timezone.now()
                 )
 
-                # 5. O PULO DO GATO: Dispara a Thread em background!
+                # Dispara a Thread em background
                 thread = threading.Thread(target=processar_ia_background, args=(inferencia.pk, exame.pk))
                 thread.start()
 
@@ -294,24 +288,23 @@ def laudar_exame(request, exame_id):
     exame = get_object_or_404(Exame, pk=exame_id)
     medico_logado = Medico.objects.get(crm=request.user.username)
     
-    # 1. Busca todas as imagens do exame
+    # Busca todas as imagens do exame
     imagens = ImagemMedica.objects.filter(id_exame=exame)
     
-    # 2. Encontra a Inferencia e o Laudo gerado pela IA
-    # Como definimos que 1 inferencia tem várias imagens, podemos pegar a inferencia da 1ª imagem
+    # Encontra a Inferencia e o Laudo gerado pela IA
     inferencia = imagens.first().id_inferencia if imagens.exists() else None
     laudo_ia = Laudo.objects.filter(id_inferencia=inferencia).first() if inferencia else None
 
     if request.method == 'POST':
         form = RevisaoLaudoForm(request.POST)
         if form.is_valid() and laudo_ia:
-            # A) Atualiza o Laudo existente com o veredito do médico
+            # Atualiza o Laudo existente com o veredito do médico
             laudo_ia.conteudo_final = form.cleaned_data['conteudo_final']
             laudo_ia.data_hora_assinatura = timezone.now()
             laudo_ia.status_aprovacao = 'Assinado'
             laudo_ia.save()
 
-            # B) Cria o registro de Revisão (Auditoria)
+            # Cria o registro de Revisão
             RevisaoLaudo.objects.create(
                 data_hora_revisao=timezone.now(),
                 concordancia=form.cleaned_data['concordancia'],
@@ -320,7 +313,7 @@ def laudar_exame(request, exame_id):
                 id_laudo=laudo_ia
             )
 
-            # C) Atualiza o Status do Exame para "Concluído"
+            # Atualiza o Status do Exame para "Concluído"
             status_concluido, _ = Status.objects.get_or_create(descricao_status='Concluído')
             ExameStatus.objects.create(
                 id_status=status_concluido,
@@ -330,8 +323,6 @@ def laudar_exame(request, exame_id):
 
             return redirect('dashboard')
     else:
-        # Pulo do gato: Preenchemos o campo 'conteudo_final' com o que a IA gerou
-        # para que o médico só precise editar em vez de digitar tudo do zero!
         initial_data = {'conteudo_final': laudo_ia.texto_gerado} if laudo_ia else {}
         form = RevisaoLaudoForm(initial=initial_data)
 
@@ -418,7 +409,7 @@ def painel_banco(request):
             if registros:
                 cabecalhos = registros[0].keys()
                 
-                # --- TRATAMENTO VISUAL: Datas Brasileiras e Ocultação do "None" ---
+                # TRATAMENTO VISUAL: Datas Brasileiras e Ocultação do "None"
                 from datetime import datetime, date
                 from django.utils.timezone import localtime
                 
@@ -431,7 +422,7 @@ def painel_banco(request):
                             # Formata apenas data
                             linha[chave] = valor.strftime('%d/%m/%Y')
                         elif valor is None:
-                            # Se for nulo, mostra um travessão elegante ao invés de "None"
+                            # Se for nulo, mostra um travessão ao invés de "None"
                             linha[chave] = "—"
                             
                 dados = registros
@@ -452,7 +443,7 @@ def painel_banco(request):
 @user_passes_test(is_superuser, login_url='dashboard')
 def dropar_tabelas(request):
     if request.method == 'POST':
-        # Deleta os usuários criados para os médicos (preservando você, o superuser)
+        # Deleta os usuários criados para os médicos (preservando o superuser)
         User.objects.filter(is_superuser=False).delete()
 
         # Desativa a checagem de chaves estrangeiras temporariamente para dropar em lote
@@ -475,7 +466,7 @@ def dropar_tabelas(request):
     
     return redirect('painel_banco')
 
-# --- VIEW AÇÃO: Criar e Popular ---
+# VIEW: Criar e Popular
 @user_passes_test(is_superuser, login_url='dashboard')
 def recriar_e_popular(request):
     if request.method == 'POST':
@@ -512,7 +503,7 @@ def recriar_e_popular(request):
 
             agora = timezone.now()
 
-            # 1. STATUS E MODELOS MLLM DENSOS (Família 7B/8B Ollama)
+            # 1. STATUS E MODELOS MLLM 
             for s in ['Aguardando Imagem', 'Em Processamento IA', 'Aguardando Laudo', 'Concluído']:
                 Status.objects.create(descricao_status=s)
             
@@ -553,7 +544,7 @@ def recriar_e_popular(request):
                 )
                 lista_pacientes.append(paciente)
 
-            # 4. MÉDICOS (Time Expandido)
+            # 4. MÉDICOS
             senha_padrao = "senha"
             medicos_info = [
                 {"nome": "Dr. Antonio Carlos", "crm": "111222", "esp": "Radiologia"},
@@ -610,7 +601,7 @@ def recriar_e_popular(request):
                 {"conc": "Discordância", "obs": "Alucinação da IA. Relatou processo degenerativo que não está presente na radiografia atual."}
             ]
 
-            # 6. GERAÇÃO DE EXAMES (40 Registros)
+            # 6. GERAÇÃO DE EXAMES
             for i in range(1, 41):
                 data_req = agora - timedelta(days=random.randint(0, 10), hours=random.randint(1, 12))
                 medico = random.choice(lista_medicos)
@@ -667,7 +658,7 @@ def dictfetchall(cursor):
     columns = [col[0] for col in cursor.description]
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
-# Nossa classe tradutora para o JSON entender os números do Banco de Dados
+# Classe tradutora para o JSON entender os números do Banco de Dados
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Decimal):
@@ -676,7 +667,6 @@ class DecimalEncoder(json.JSONEncoder):
 
 @login_required
 def consultas_relatorios(request):
-    # O professor pede consultas em SQL. Usaremos o connection.cursor() para rodar SQL bruto.
     with connection.cursor() as cursor:
         
         # CONSULTA 1: Desempenho e Custo dos Modelos de IA
@@ -726,7 +716,7 @@ def consultas_relatorios(request):
         cursor.execute(query3)
         dados_q3 = dictfetchall(cursor)
 
-    # Convertendo os dados para JSON e usando nosso tradutor (DecimalEncoder)
+    # Convertendo os dados para JSON usando DecimalEncoder
     context = {
         'dados_q1': dados_q1,
         'dados_q2': dados_q2,

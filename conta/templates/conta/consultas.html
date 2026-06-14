@@ -158,12 +158,11 @@
 
 {% block extra_js %}
 <script>
-    // Carrega os dados JSON gerados no backend pelo Django
     const rawData1 = {{ json_q1|safe }};
     const rawData2 = {{ json_q2|safe }};
     const rawData3 = {{ json_q3|safe }};
 
-    // --- GRÁFICO 1: Barras (Tempo de Processamento) ---
+    // GRÁFICO 1: Barras
     const ctx1 = document.getElementById('grafico1').getContext('2d');
     new Chart(ctx1, {
         type: 'bar',
@@ -180,7 +179,7 @@
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // --- GRÁFICO 2: Doughnut (Volume de Arquivos em MB) ---
+    // GRÁFICO 2
     const ctx2 = document.getElementById('grafico2').getContext('2d');
     new Chart(ctx2, {
         type: 'doughnut',
@@ -196,7 +195,7 @@
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // --- GRÁFICO 3: Pie (Concordância dos Médicos) ---
+    // GRÁFICO 3
     const ctx3 = document.getElementById('grafico3').getContext('2d');
     new Chart(ctx3, {
         type: 'pie',
