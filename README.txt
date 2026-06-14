@@ -3,7 +3,7 @@
 
 Sistema de Apoio ao Diagnóstico por Imagem com Inferência por MLLM.
 
-**Alunos:** Kaio Martinhago e Pablo
+**Alunos:** Kaio Francisco Martinhago e Pablo da Rosa Pimentel
 
 ## Visão geral
 
