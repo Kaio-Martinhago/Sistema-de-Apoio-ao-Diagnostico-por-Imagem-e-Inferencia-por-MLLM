@@ -166,7 +166,7 @@ def processar_ia_background(inferencia_id, exame_id):
     )
 
     payload = {
-        "model": "llava",
+        "model": "moondream",
         "prompt": prompt,
         "images": imagens_b64,
         "stream": False,
@@ -235,7 +235,7 @@ def upload_imagens(request, exame_id):
 
             if imagens:
                 modelo, _ = ModeloMllm.objects.get_or_create(
-                    nome_modelo='llava', defaults={'versao': '7B', 'arquitetura': 'ViT+LLM'}
+                    nome_modelo='moondream', defaults={'versao': '1.8B', 'arquitetura': 'ViT+LLM'}
                 )
 
 
@@ -512,8 +512,8 @@ def recriar_e_popular(request):
             StatusLaud = Status.objects.get(descricao_status='Aguardando Laudo')
             StatusConc = Status.objects.get(descricao_status='Concluído')
 
-            mod1 = ModeloMllm.objects.create(nome_modelo="LLaVA", versao="7B", arquitetura="ViT+LLM")
-            mod2 = ModeloMllm.objects.create(nome_modelo="Llama-3-Vision", versao="8B", arquitetura="ViT+LLM")
+            mod1 = ModeloMllm.objects.create(nome_modelo="moondream", versao="1.8B", arquitetura="ViT+LLM")
+            mod2 = ModeloMllm.objects.create(nome_modelo="llava", versao="7B", arquitetura="ViT+LLM")
             mod3 = ModeloMllm.objects.create(nome_modelo="BakLLaVA", versao="7B", arquitetura="ViT+LLM")
             mod4 = ModeloMllm.objects.create(nome_modelo="Qwen-VL-Chat", versao="7B", arquitetura="ViT+LLM")
             lista_modelos = [mod1, mod2, mod3, mod4]
@@ -646,7 +646,7 @@ def recriar_e_popular(request):
                     laudo = Laudo.objects.create(data_hora_geracao=data_req + timedelta(minutes=15), texto_gerado=texto_ia_sorteado, conteudo_final=texto_medico, data_hora_assinatura=data_req + timedelta(hours=2), status_aprovacao='Assinado', tokens_consumidos=random.randint(110, 180), prompt_utilizado="You are a medical AI assistant. Analyze this radiological image...", id_modelo=modelo_usado, id_inferencia=inf)
                     RevisaoLaudo.objects.create(data_hora_revisao=data_req + timedelta(hours=2), concordancia=revisao_sorteada["conc"], observacao_tecnica=revisao_sorteada["obs"], id_medico=medico, id_laudo=laudo)
 
-            messages.success(request, f"O Banco de Dados foi populado com sucesso! Modelos MLLM (LLaVA, Llama-3-Vision, BakLLaVA e Qwen-VL) aplicados em Raio-X.<br><hr>{credenciais_msg}", extra_tags='safe')
+            messages.success(request, f"O Banco de Dados foi populado com sucesso! Modelos MLLM (Moondream, LLaVA, BakLLaVA e Qwen-VL) aplicados em Raio-X.<br><hr>{credenciais_msg}", extra_tags='safe')
 
         except Exception as e:
             messages.error(request, f"Erro estrutural ao criar/popular tabelas: {e}")
