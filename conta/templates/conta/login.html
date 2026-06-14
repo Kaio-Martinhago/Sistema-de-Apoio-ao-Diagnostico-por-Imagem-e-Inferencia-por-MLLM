@@ -8,10 +8,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background-color: #0A2540; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        body { background-color: #0A2540; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; position: relative; }
         
         /* A caixa principal agora tem fundo transparente */
-        .login-wrapper { display: flex; width: 100%; max-width: 900px; background: transparent; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .login-wrapper { display: flex; width: 100%; max-width: 900px; background: transparent; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 10; }
         
         /* A parte escura arredonda só os cantos da esquerda */
         .login-brand { background: linear-gradient(135deg, #0A2540 0%, #005A5A 100%); color: white; padding: 40px; width: 45%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border-top-left-radius: 16px; border-bottom-left-radius: 16px; }
@@ -25,6 +25,18 @@
         .form-control:focus { border-color: #00D4B2; box-shadow: 0 0 0 3px rgba(0, 212, 178, 0.2); }
         .btn-primary { background-color: #00D4B2; border: none; padding: 12px; border-radius: 8px; font-weight: 600; color: #0A2540; transition: all 0.3s ease; }
         .btn-primary:hover { background-color: #00b396; color: white; }
+
+        /* Estilo para os créditos no rodapé */
+        .credits {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5); /* Branco com 50% de transparência */
+            font-size: 0.85rem;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
 <body>
@@ -71,6 +83,10 @@
             </div>
         </form>
     </div>
+</div>
+
+<div class="credits">
+    <i class="fa-solid fa-code me-1"></i> Feito por Kaio Francisco Martinhago e Pablo da Rosa Pimentel
 </div>
 
 </body>

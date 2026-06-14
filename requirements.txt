@@ -1,0 +1,41 @@
+# --- Framework Web e Interface ---
+Django==5.2.5
+django-jazzmin==3.0.4
+asgiref==3.9.1
+sqlparse==0.5.3
+
+# --- Banco de Dados ---
+mysqlclient==2.2.7
+
+# --- Processamento de Imagens e IA ---
+pillow==12.0.0
+scikit-learn==1.7.2
+scipy==1.16.3
+numpy==2.3.5
+joblib==1.5.2
+threadpoolctl==3.6.0
+
+# --- Geração de Gráficos e Visualização (Requisito do Trabalho) ---
+matplotlib==3.10.8
+graphviz==0.21
+contourpy==1.3.3
+cycler==0.12.1
+fonttools==4.61.1
+kiwisolver==1.4.9
+pyparsing==3.3.1
+
+# --- Utilitários e População de Dados ---
+Faker==40.15.0
+requests==2.34.2
+tqdm==4.67.1
+colorama==0.4.6
+
+# --- Dependências Base e Redes ---
+certifi==2026.5.20
+charset-normalizer==3.4.7
+idna==3.17
+packaging==25.0
+python-dateutil==2.9.0.post0
+six==1.17.0
+tzdata==2025.2
+urllib3==2.7.0

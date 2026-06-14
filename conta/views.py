@@ -172,7 +172,7 @@ def processar_ia_background(inferencia_id, exame_id):
     )
 
     payload = {
-        "model": "moondream",
+        "model": "llava:13b",
         "prompt": prompt,
         "images": imagens_b64,
         "stream": False,
@@ -241,7 +241,7 @@ def upload_imagens(request, exame_id):
 
             if imagens:
                 modelo, _ = ModeloMllm.objects.get_or_create(
-                    nome_modelo='minicpm-v', defaults={'versao': '7B', 'arquitetura': 'ViT+LLM'}
+                    nome_modelo='llava:13b', defaults={'versao': '13B', 'arquitetura': 'ViT+LLM'}
                 )
 
 
