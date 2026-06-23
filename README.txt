@@ -146,7 +146,7 @@ python manage.py runserver
 
 Depois, acesse a aplicação no navegador:
 
-[http://127.0.0.1:8000/](http://127.0.0.1:8000/)
+[http://127.0.0.1:8000/]
 
 Faça login com o superusuário criado no passo anterior.
 
@@ -154,7 +154,7 @@ Faça login com o superusuário criado no passo anterior.
 
 Também é possível acessar a tela administrativa padrão do Django pelo endereço:
 
-[http://127.0.0.1:8000/admin](http://127.0.0.1:8000/admin)
+[http://127.0.0.1:8000/admin]
 
 Nessa área, o usuário poderá editar, inserir ou excluir registros das tabelas disponíveis no sistema, de acordo com a lógica do banco de dados e com as restrições definidas pelas chaves primárias (PK) e chaves estrangeiras (FK).
 
