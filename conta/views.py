@@ -23,6 +23,7 @@ import random
 import json
 from decimal import Decimal
 from datetime import timedelta
+from django.db.utils import OperationalError, ProgrammingError
 
 
 @login_required
@@ -111,37 +112,41 @@ def cadastro_exame(request):
     return render(request, 'conta/cadastro_exame.html', {'form': form, 'medico_logado': medico_logado})
 
 def criar_conta_medico(request):
-    if request.method == 'POST':
-        form = MedicoRegistroForm(request.POST)
-        if form.is_valid():
-            dados = form.cleaned_data
-            
-            # Verifica se já existe um usuário com esse CRM (username)
-            if not User.objects.filter(username=dados['crm']).exists():
-                # Cria o controle de acesso e senha no Django
-                user = User.objects.create_user(username=dados['crm'], password=dados['senha'])
-                user.first_name = dados['nome_completo'].split()[0]
-                user.save()
-                
-                # Cria os dados médicos na sua tabela MySQL
-                Medico.objects.create(
-                    nome_completo=dados['nome_completo'],
-                    crm=dados['crm'],
-                    uf_crm=dados['uf_crm'],
-                    especialidade=dados['especialidade'],
-                    email_institucional=dados['email_institucional'],
-                )
-                
-                # Faz o login automático e manda pro dashboard
-                login(request, user)
-                return redirect('dashboard')
-            else:
-                form.add_error('crm', 'Já existe um cadastro com este CRM.')
-    else:
-        form = MedicoRegistroForm()
-        
-    return render(request, 'conta/criar_conta.html', {'form': form})
 
+    try:
+        if request.method == 'POST':
+            form = MedicoRegistroForm(request.POST)
+            if form.is_valid():
+                dados = form.cleaned_data
+                
+                # Verifica se já existe um usuário com esse CRM (username)
+                if not User.objects.filter(username=dados['crm']).exists():
+                    # Cria o controle de acesso e senha no Django
+                    user = User.objects.create_user(username=dados['crm'], password=dados['senha'])
+                    user.first_name = dados['nome_completo'].split()[0]
+                    user.save()
+                    
+                    # Cria os dados médicos na sua tabela MySQL
+                    Medico.objects.create(
+                        nome_completo=dados['nome_completo'],
+                        crm=dados['crm'],
+                        uf_crm=dados['uf_crm'],
+                        especialidade=dados['especialidade'],
+                        email_institucional=dados['email_institucional'],
+                    )
+                    
+                    # Faz o login automático e manda pro dashboard
+                    login(request, user)
+                    return redirect('dashboard')
+                else:
+                    form.add_error('crm', 'Já existe um cadastro com este CRM.')
+        else:
+            form = MedicoRegistroForm()
+            
+        return render(request, 'conta/criar_conta.html', {'form': form})
+    except (OperationalError, ProgrammingError):
+        messages.error(request, "O sistema ainda não foi inicializado. Solicite ao administrador que execute o script de criação do banco de dados (Painel Admin DB).")
+        return redirect('login')
 
 def processar_ia_background(inferencia_id, exame_id):
     inferencia = Inferencia.objects.get(pk=inferencia_id)
@@ -338,14 +343,20 @@ def laudar_exame(request, exame_id):
 def historico_paciente(request):
     query = request.GET.get('q', '')
     exames = []
-    if query:
-        # Busca exames do paciente pesquisado que já têm o status "Concluído"
-        exames = Exame.objects.filter(
-            Q(id_paciente__nome_completo__icontains=query) | Q(id_paciente__cpf__icontains=query),
-            examestatus__id_status__descricao_status='Concluído'
-        ).distinct().order_by('-data_hora_solicitacao')
     
-    return render(request, 'conta/historico_paciente.html', {'exames': exames})
+    try:
+        if query:
+            exames = Exame.objects.filter(
+                Q(id_paciente__nome_completo__icontains=query) | Q(id_paciente__cpf__icontains=query),
+                examestatus__id_status__descricao_status='Concluído'
+            ).distinct().order_by('-data_hora_solicitacao')
+            
+        return render(request, 'conta/historico_paciente.html', {'exames': exames})
+            
+    except (OperationalError, ProgrammingError):
+        # Dispara o erro e joga de volta para a Hub
+        messages.error(request, "⚠️ Acesso negado: A tabela de Exames não existe. Inicialize o banco de dados primeiro.")
+        return redirect('dashboard')
 
 @login_required
 def detalhes_exame(request, exame_id):
@@ -667,67 +678,64 @@ class DecimalEncoder(json.JSONEncoder):
 
 @login_required
 def consultas_relatorios(request):
-    with connection.cursor() as cursor:
+    try:
+        with connection.cursor() as cursor:
+            query1 = """
+                SELECT 
+                    m.Nome_Modelo, 
+                    COUNT(i.ID_Inferencia) as Total_Inferencias, 
+                    ROUND(AVG(i.Tempo_Processamento), 0) as Tempo_Medio_MS,
+                    ROUND(AVG(l.Tokens_Consumidos), 0) as Media_Tokens
+                FROM modelo_mllm m
+                JOIN inferencia i ON m.ID_Modelo = i.ID_Modelo
+                JOIN laudo l ON i.ID_Inferencia = l.ID_Inferencia
+                GROUP BY m.Nome_Modelo;
+            """
+            cursor.execute(query1)
+            dados_q1 = dictfetchall(cursor)
+
+            query2 = """
+                SELECT 
+                    eq.Nome_Equipamento, 
+                    COUNT(DISTINCT ex.ID_Exame) as Total_Exames, 
+                    ROUND(SUM(im.Tamanho_Arquivo_MB), 2) as Volume_Total_MB
+                FROM equipamento eq
+                JOIN exame ex ON eq.ID_Equipamento = ex.ID_Equipamento
+                JOIN imagem_medica im ON ex.ID_Exame = im.ID_Exame
+                GROUP BY eq.Nome_Equipamento;
+            """
+            cursor.execute(query2)
+            dados_q2 = dictfetchall(cursor)
+
+            query3 = """
+                SELECT 
+                    rl.Concordancia, 
+                    COUNT(rl.ID_Revisao) as Quantidade_Revisoes,
+                    ROUND(AVG(l.Tokens_Consumidos), 0) as Media_Tokens_Gastos
+                FROM revisao_laudo rl
+                JOIN medico m ON rl.ID_Medico = m.ID_Medico
+                JOIN laudo l ON rl.ID_Laudo = l.ID_Laudo
+                GROUP BY rl.Concordancia
+                ORDER BY Quantidade_Revisoes DESC;
+            """
+            cursor.execute(query3)
+            dados_q3 = dictfetchall(cursor)
+
+        context = {
+            'dados_q1': dados_q1,
+            'dados_q2': dados_q2,
+            'dados_q3': dados_q3,
+            'json_q1': json.dumps(dados_q1, cls=DecimalEncoder),
+            'json_q2': json.dumps(dados_q2, cls=DecimalEncoder),
+            'json_q3': json.dumps(dados_q3, cls=DecimalEncoder),
+            'query1_sql': query1.strip(),
+            'query2_sql': query2.strip(),
+            'query3_sql': query3.strip(),
+        }
         
-        # CONSULTA 1: Desempenho e Custo dos Modelos de IA
-        # Tabelas: modelo_mllm, inferencia, laudo
-        query1 = """
-            SELECT 
-                m.Nome_Modelo, 
-                COUNT(i.ID_Inferencia) as Total_Inferencias, 
-                ROUND(AVG(i.Tempo_Processamento), 0) as Tempo_Medio_MS,
-                ROUND(AVG(l.Tokens_Consumidos), 0) as Media_Tokens
-            FROM modelo_mllm m
-            JOIN inferencia i ON m.ID_Modelo = i.ID_Modelo
-            JOIN laudo l ON i.ID_Inferencia = l.ID_Inferencia
-            GROUP BY m.Nome_Modelo;
-        """
-        cursor.execute(query1)
-        dados_q1 = dictfetchall(cursor)
+        return render(request, 'conta/consultas.html', context)
 
-        # CONSULTA 2: Carga de Exames e Volume de Dados por Equipamento
-        # Tabelas: equipamento, exame, imagem_medica
-        query2 = """
-            SELECT 
-                eq.Nome_Equipamento, 
-                COUNT(DISTINCT ex.ID_Exame) as Total_Exames, 
-                ROUND(SUM(im.Tamanho_Arquivo_MB), 2) as Volume_Total_MB
-            FROM equipamento eq
-            JOIN exame ex ON eq.ID_Equipamento = ex.ID_Equipamento
-            JOIN imagem_medica im ON ex.ID_Exame = im.ID_Exame
-            GROUP BY eq.Nome_Equipamento;
-        """
-        cursor.execute(query2)
-        dados_q2 = dictfetchall(cursor)
-
-        # CONSULTA 3: Taxa de Aceitação Médica da Inteligência Artificial
-        # Tabelas: revisao_laudo, medico, laudo
-        query3 = """
-            SELECT 
-                rl.Concordancia, 
-                COUNT(rl.ID_Revisao) as Quantidade_Revisoes,
-                ROUND(AVG(l.Tokens_Consumidos), 0) as Media_Tokens_Gastos
-            FROM revisao_laudo rl
-            JOIN medico m ON rl.ID_Medico = m.ID_Medico
-            JOIN laudo l ON rl.ID_Laudo = l.ID_Laudo
-            GROUP BY rl.Concordancia
-            ORDER BY Quantidade_Revisoes DESC;
-        """
-        cursor.execute(query3)
-        dados_q3 = dictfetchall(cursor)
-
-    # Convertendo os dados para JSON usando DecimalEncoder
-    context = {
-        'dados_q1': dados_q1,
-        'dados_q2': dados_q2,
-        'dados_q3': dados_q3,
-        'json_q1': json.dumps(dados_q1, cls=DecimalEncoder),
-        'json_q2': json.dumps(dados_q2, cls=DecimalEncoder),
-        'json_q3': json.dumps(dados_q3, cls=DecimalEncoder),
-        'query1_sql': query1.strip(),
-        'query2_sql': query2.strip(),
-        'query3_sql': query3.strip(),
-    }
-    
-    return render(request, 'conta/consultas.html', context)
-    
+    except (OperationalError, ProgrammingError):
+        # Dispara o erro e joga de volta para a Hub
+        messages.error(request, "⚠️ Acesso negado: As tabelas necessárias para os relatórios não existem. Crie as tabelas lógicas antes de acessar esta tela.")
+        return redirect('dashboard')
