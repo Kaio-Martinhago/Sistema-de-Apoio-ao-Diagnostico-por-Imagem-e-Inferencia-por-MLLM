@@ -64,6 +64,8 @@ payload = {
 }
 ```
 
+Além disso, localize a função `upload_imagens` e altere os parâmetros do modelo associado nas linhas ModeloLLM.objects.get_or_create
+
 ## Clonagem do repositório e ambiente virtual
 
 Escolha uma pasta de sua preferência, abra outro terminal nesse local (um ficará executando o Ollama e o outro será usado para rodar o projeto) e clone o repositório:
@@ -125,6 +127,7 @@ Localize o dicionário `DATABASES` e substitua o valor do campo `PASSWORD` pela 
 Com o ambiente configurado e o banco pronto, execute os comandos abaixo no terminal para criar as tabelas nativas do Django e o usuário administrador:
 
 ```powershell
+python manage.py makemigrations
 python manage.py migrate
 python manage.py createsuperuser
 ```
@@ -148,7 +151,7 @@ Depois, acesse a aplicação no navegador:
 
 [http://127.0.0.1:8000/]
 
-Faça login com o superusuário criado no passo anterior.
+Faça login com o superusuário criado no passo anterior, selecione a opção de criar as tabelas use o sistema normalmente.
 
 ### Acesso à área administrativa do Django
 
@@ -194,7 +197,7 @@ Para facilitar, o processo completo de execução do projeto é:
 8. Criar o superusuário.
 9. Iniciar o servidor Django.
 10. Acessar o sistema no navegador.
-11. Usar a opção de recriação e população do banco no painel.
+11. Usar a opção de recriação e população do banco no painel (SEM ISSO O SISTEMA NÃO FUNCIONARÁ).
 
 ## Observações finais
 
